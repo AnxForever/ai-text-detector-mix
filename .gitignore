@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+*.egg-info/
+dist/
+build/
+
+# 数据文件
+*.csv
+*.json
+*.log
+
+# 缓存
+dimension_cache/
+auto_generated_datasets/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 敏感信息
+.env
+api_keys.txt
