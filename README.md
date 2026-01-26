@@ -24,10 +24,25 @@
 
 📖 **完整成果**: [FINAL_RESULTS.md](FINAL_RESULTS.md) | **数据模型**: [DATA_AND_MODELS.md](DATA_AND_MODELS.md)
 
+## 🤗 Hugging Face模型
+
+- 🔥 [BERT分类器](https://huggingface.co/AnxForever/chinese-ai-detector-bert) - 98.71%准确率
+- 🎯 [边界检测器](https://huggingface.co/AnxForever/chinese-ai-detector-span) - Token级定位
+- 📊 [训练数据集](https://huggingface.co/datasets/AnxForever/chinese-ai-detection-dataset) - 66K样本
+
+## 🤗 Hugging Face模型
+
+- 🔥 [BERT分类器](https://huggingface.co/AnxForever/chinese-ai-detector-bert) - 98.71%准确率
+- 🎯 [边界检测器](https://huggingface.co/AnxForever/chinese-ai-detector-span) - Token级定位
+- 📊 [训练数据集](https://huggingface.co/datasets/AnxForever/chinese-ai-detection-dataset) - 66K样本
+
 ---
 
 ## 🚀 快速演示
 
+**在线使用**: [Hugging Face模型](https://huggingface.co/AnxForever/chinese-ai-detector-bert)
+
+**本地运行**:
 ```bash
 cd /mnt/c/datacollection
 source .venv/bin/activate
@@ -42,6 +57,8 @@ python scripts/evaluation/eval_complete.py
 # 生成评估报告
 python scripts/evaluation/generate_report.py
 ```
+
+📘 **详细教程**: [QUICKSTART.md](QUICKSTART.md)
 
 ---
 
