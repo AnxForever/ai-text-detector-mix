@@ -1,16 +1,28 @@
-# 中文AI文本检测系统
+# Chinese AI-Generated Text Detection with Boundary Markers
+
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.12-green.svg)](https://www.python.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red.svg)](https://pytorch.org/)
+[![Accuracy](https://img.shields.io/badge/Accuracy-98.71%25-brightgreen.svg)](FINAL_RESULTS.md)
+
+> 中文AI文本检测系统 - 基于边界标记的混合文本检测
 
 ## 🎯 项目简介
 
 针对中文混合文本（人类+AI）的检测系统，实现了从粗粒度分类到细粒度边界定位的完整解决方案。
 
-**核心成果**:
-- ✅ 整体准确率: **98.71%**
-- ✅ C2混合文本检测: **93.84%** (提升14%)
-- ✅ 边界定位准确率: **96.69%** (Token级)
-- ✅ 实际边界误差: **<10字符**
+### 核心成果
+- ✅ **整体准确率**: 98.71%
+- ✅ **C2混合文本检测**: 93.84% (提升14%)
+- ✅ **边界定位准确率**: 96.69% (Token级)
+- ✅ **实际边界误差**: <10字符
 
-📖 **完整成果**: 查看 [FINAL_RESULTS.md](FINAL_RESULTS.md)
+### 技术创新
+- 🔥 **边界标记机制**: 使用`[SEP]`标记显式标注人类/AI边界
+- 🔥 **双层检测架构**: 分类器 + 边界检测器
+- 🔥 **Token级精确定位**: 实现细粒度边界检测
+
+📖 **完整成果**: [FINAL_RESULTS.md](FINAL_RESULTS.md) | **数据模型**: [DATA_AND_MODELS.md](DATA_AND_MODELS.md)
 
 ---
 
