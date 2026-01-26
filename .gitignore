@@ -62,3 +62,6 @@ fonts/
 # 特殊文件
 Antigravity.exe
 upload_with_token.sh
+
+# 子项目（独立仓库）
+frontend/
