@@ -77,16 +77,25 @@
 
 ### 方案1: 百度网盘 (推荐)
 ```
-链接: [待添加]
-提取码: [待添加]
+链接: https://pan.baidu.com/s/[待上传后填写]
+提取码: [待填写]
 ```
 
-### 方案2: Google Drive
+**包含内容**:
+- `models.zip` (779MB) - 两个训练好的模型
+- `datasets.zip` (483MB) - 完整数据集
+
+### 方案2: 阿里云盘
 ```
-链接: [待添加]
+链接: https://www.alipan.com/s/[待上传后填写]
 ```
 
-### 方案3: Hugging Face Hub
+### 方案3: Google Drive
+```
+链接: https://drive.google.com/[待上传后填写]
+```
+
+### 方案4: Hugging Face Hub (待上传)
 ```bash
 # 下载模型
 huggingface-cli download AnxForever/chinese-ai-detector-bert
@@ -96,10 +105,7 @@ huggingface-cli download AnxForever/chinese-ai-detector-span
 huggingface-cli download AnxForever/chinese-ai-detection-dataset
 ```
 
-### 方案4: 学术网盘 (国内)
-```
-链接: [待添加]
-```
+**注**: 由于网络限制，Hugging Face上传暂时无法完成。推荐使用百度网盘下载。
 
 ---
 
