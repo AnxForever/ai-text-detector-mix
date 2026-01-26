@@ -1,7 +1,5 @@
-# 模型文件（重要！不要上传到Git）
-models/
-*.safetensors
-*.bin
+# 模型文件（使用Git LFS管理）
+# models/ - 已通过Git LFS追踪
 *.pt
 *.pth
 *.ckpt
@@ -18,10 +16,9 @@ __pycache__/
 *.pyd
 .Python
 
-# 数据集（太大，不上传）
-datasets/
+# 数据集（使用Git LFS管理）
+# datasets/ - 已通过Git LFS追踪
 *.csv
-*.json
 *.txt
 !requirements*.txt
 !.gitignore
