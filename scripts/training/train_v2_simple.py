@@ -69,8 +69,8 @@ def main():
     model = BertForSequenceClassification.from_pretrained(model_path).to(device)
     
     # Load data
-    train_df = pd.read_csv('datasets/combined_v2/train.csv')
-    val_df = pd.read_csv('datasets/combined_v2/val.csv')
+    train_df = pd.read_csv('datasets/active/core_v1/train.csv')
+    val_df = pd.read_csv('datasets/active/core_v1/val.csv')
     
     print(f"Train: {len(train_df)}, Val: {len(val_df)}")
     

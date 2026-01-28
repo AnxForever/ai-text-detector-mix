@@ -1,12 +1,21 @@
 #!/usr/bin/env python3
 """C4: 人类原文+AI润色 (gemini-3-pro)"""
-import os, json, time, random, hashlib
+import os
+import sys
+import json
+import time
+import random
+import hashlib
 import pandas as pd
 import requests
 
-API = {"url": "https://ai.hybgzs.com/v1", "key": "sk-LQO5p6niHb31gBt_2T_yqGMgiKwgnm9b2os3QCgjuRphSTITFlsnBWFBGCI", "model": "gemini-3-pro-preview", "rpm": 5}
-OUTPUT = "datasets/hybrid/c4_polished.json"
-os.makedirs("datasets/hybrid", exist_ok=True)
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from scripts.utils.api_config import get_proxy_config
+
+remote = get_proxy_config("remote_proxy", "REMOTE_PROXY", "https://api.hotaruapi.top/v1")
+API = {"url": remote["url"], "key": remote["key"], "model": "gemini-3-pro-preview", "rpm": 5}
+OUTPUT = "datasets/mixed/hybrid/c4_polished.json"
+os.makedirs("datasets/mixed/hybrid", exist_ok=True)
 
 def call_api(prompt):
     try:
@@ -21,7 +30,7 @@ def call_api(prompt):
     return None
 
 def main():
-    human_df = pd.read_csv("datasets/final_clean/all_human.csv")
+    human_df = pd.read_csv("datasets/active/core_v1/all_human.csv")
     humans = human_df["text"].sample(250).tolist()
     
     results = []

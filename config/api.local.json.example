@@ -1,0 +1,18 @@
+﻿{
+  "nvidia": {
+    "api_key": "YOUR_NVIDIA_KEY",
+    "base_url": "https://integrate.api.nvidia.com/v1"
+  },
+  "local_proxy": {
+    "base_url": "http://192.168.60.105:8317/v1",
+    "api_key": "YOUR_LOCAL_PROXY_KEY"
+  },
+  "remote_proxy": {
+    "base_url": "https://api.hotaruapi.top/v1",
+    "api_key": "YOUR_REMOTE_PROXY_KEY"
+  },
+  "hybgzs_proxy": {
+    "base_url": "https://ai.hybgzs.com/v1",
+    "api_key": "YOUR_HYBGZS_PROXY_KEY"
+  }
+}

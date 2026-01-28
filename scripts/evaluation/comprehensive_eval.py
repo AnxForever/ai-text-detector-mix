@@ -46,7 +46,7 @@ def main():
     os.makedirs('evaluation_results', exist_ok=True)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     tokenizer = BertTokenizer.from_pretrained('bert-base-chinese')
-    test_df = pd.read_csv('datasets/final_clean/test.csv')
+    test_df = pd.read_csv('datasets/active/core_v1/test.csv')
     
     # BERT V2使用标准格式
     models = {

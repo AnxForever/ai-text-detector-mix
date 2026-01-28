@@ -1,0 +1,106 @@
+﻿# OOD_HS 模板（legal/finance）
+# 生成时间: 2026-01-28
+
+- id: HS_LEGAL_LIST_01
+  scenario_id: B
+  style_plan: list
+  length_bucket: 500-1000
+  notes: "spec_like=1"
+  template: |
+    【MUST】
+    - 只输出正文，不输出任务说明/格式说明。
+    - 不得出现：作为AI/语言模型、我无法/我不能、免责声明/拒绝表述。
+    - 字数约650–950字。
+    - 主题为“数据脱敏处理规范”。
+    - 必须包含：规则条目≥8条；处罚/责任条款≥2条（含阈值或触发条件）；审批流程≥3步。
+
+- id: HS_LEGAL_REPORT_02
+  scenario_id: B
+  style_plan: report
+  length_bucket: 1000-2000
+  notes: "spec_like=1"
+  template: |
+    【MUST】
+    - 只输出正文，不输出任务说明/格式说明。
+    - 不得出现：作为AI/语言模型、我无法/我不能、免责声明/拒绝表述。
+    - 字数约1200–1800字。
+    - 写“合规整改通报/内部合规报告”。
+    - 必须包含：背景+范围+问题概述；整改措施≥6条（含负责人{姓名}与期限{日期}）；风险评估≥2条（含阈值）。
+
+- id: HS_LEGAL_GUIDE_03
+  scenario_id: B
+  style_plan: guide
+  length_bucket: 200-500
+  notes: "spec_like=1"
+  template: |
+    【MUST】
+    - 只输出正文，不输出任务说明/格式说明。
+    - 不得出现：作为AI/语言模型、我无法/我不能、免责声明/拒绝表述。
+    - 字数约280–450字。
+    - 写“申诉/仲裁流程说明”。
+    - 必须包含：步骤≥5步；材料清单≥4项；时限/阈值≥2处。
+
+- id: HS_LEGAL_EXPL_04
+  scenario_id: F
+  style_plan: explanation
+  length_bucket: 500-1000
+  notes: ""
+  template: |
+    【MUST】
+    - 只输出正文，不输出任务说明/格式说明。
+    - 不得出现：作为AI/语言模型、我无法/我不能、免责声明/拒绝表述。
+    - 字数约650–950字。
+    - 解释“隐私政策/数据保护条款”的核心义务与边界。
+    - 必须包含：定义≥2条；适用范围≥2条；例外情形≥2条（含条件/阈值）。
+
+- id: HS_FIN_LIST_05
+  scenario_id: C
+  style_plan: list
+  length_bucket: 500-1000
+  notes: "spec_like=1"
+  template: |
+    【MUST】
+    - 只输出正文，不输出任务说明/格式说明。
+    - 不得出现：作为AI/语言模型、我无法/我不能、免责声明/拒绝表述。
+    - 字数约650–950字。
+    - 写“理财产品条款要点清单”。
+    - 必须包含：条目≥8条；风险提示≥2条（含阈值）；费用/期限信息≥3条（含数值）。
+
+- id: HS_FIN_GUIDE_06
+  scenario_id: C
+  style_plan: guide
+  length_bucket: 200-500
+  notes: ""
+  template: |
+    【MUST】
+    - 只输出正文，不输出任务说明/格式说明。
+    - 不得出现：作为AI/语言模型、我无法/我不能、免责声明/拒绝表述。
+    - 字数约280–450字。
+    - 写“投资风险自测步骤”。
+    - 必须包含：步骤≥5步；评分或分级规则≥1条（含阈值）。
+
+- id: HS_FIN_REPORT_07
+  scenario_id: F
+  style_plan: report
+  length_bucket: 1000-2000
+  notes: ""
+  template: |
+    【MUST】
+    - 只输出正文，不输出任务说明/格式说明。
+    - 不得出现：作为AI/语言模型、我无法/我不能、免责声明/拒绝表述。
+    - 字数约1200–1800字。
+    - 写“市场风险提示公告/财经简报”。
+    - 必须包含：背景与影响范围；关键数据≥6个；风险点≥3条（含阈值或条件）。
+
+- id: HS_FIN_EXPL_08
+  scenario_id: C
+  style_plan: explanation
+  length_bucket: 500-1000
+  notes: ""
+  template: |
+    【MUST】
+    - 只输出正文，不输出任务说明/格式说明。
+    - 不得出现：作为AI/语言模型、我无法/我不能、免责声明/拒绝表述。
+    - 字数约650–950字。
+    - 解释“收益率/回撤/波动率”的含义与差异。
+    - 必须包含：定义≥3条；对比示例≥1组（含数值）；适用场景≥2条（含条件）。

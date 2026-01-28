@@ -27,8 +27,8 @@ def train():
     tokenizer = BertTokenizer.from_pretrained('bert-base-chinese')
     model = BertForSequenceClassification.from_pretrained('bert-base-chinese', num_labels=2).to(device)
     
-    train_ds = TextDataset('datasets/hybrid/train.csv', tokenizer)
-    val_ds = TextDataset('datasets/hybrid/val.csv', tokenizer)
+    train_ds = TextDataset('datasets/mixed/hybrid/train.csv', tokenizer)
+    val_ds = TextDataset('datasets/mixed/hybrid/val.csv', tokenizer)
     train_loader = DataLoader(train_ds, batch_size=16, shuffle=True)
     val_loader = DataLoader(val_ds, batch_size=32)
     
@@ -73,7 +73,7 @@ def train():
     print(f'Best val acc: {best_acc:.4f}')
     
     # 测试
-    test_ds = TextDataset('datasets/hybrid/test.csv', tokenizer)
+    test_ds = TextDataset('datasets/mixed/hybrid/test.csv', tokenizer)
     test_loader = DataLoader(test_ds, batch_size=32)
     model = BertForSequenceClassification.from_pretrained('models/bert_hybrid').to(device).eval()
     

@@ -27,7 +27,7 @@ python scripts/evaluation/complete_evaluation.py
 python scripts/demo/visualize_detection.py
 
 # Test V0 API integration
-python test_v0_api.py
+python api/tests/test_v0_api.py
 ```
 
 ### Training Models

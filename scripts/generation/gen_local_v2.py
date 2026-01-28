@@ -1,13 +1,21 @@
 #!/usr/bin/env python3
 """本地反代高速生成 (4并发)"""
-import os, json, time, random, hashlib
+import os
+import sys
+import json
+import time
+import random
+import hashlib
 import pandas as pd
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-API = {"url": "http://192.168.60.105:8317/v1", "key": "cliproxyapi-test-key-2026"}
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from scripts.utils.api_config import get_proxy_config
+
+API = get_proxy_config("local_proxy", "LOCAL_PROXY", "http://192.168.60.105:8317/v1")
 MODELS = ["deepseek-v3.1", "qwen3-32b", "glm-4.7", "qwen3-235b"]
-OUTPUT_DIR = "datasets/hybrid"
+OUTPUT_DIR = "datasets/mixed/hybrid"
 
 def call(model, prompt):
     try:
@@ -59,7 +67,7 @@ def save(data, name):
 
 def main():
     print("高速生成 (4并发)...", flush=True)
-    human_df = pd.read_csv("datasets/final_clean/all_human.csv")
+    human_df = pd.read_csv("datasets/active/core_v1/all_human.csv")
     humans = human_df["text"].sample(1500).tolist()
     topics = ["人工智能", "健康生活", "城市发展", "环境保护", "教育问题", "科技创新", "职场经验", "旅行见闻", "美食文化", "电影音乐"] * 30
     

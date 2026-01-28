@@ -4,9 +4,9 @@ import json, os, time
 from datetime import datetime
 
 FILES = {
-    "C2": "datasets/hybrid/c2_continuation.json",
-    "C3": "datasets/hybrid/c3_edited.json",
-    "C4": "datasets/hybrid/c4_polished.json"
+    "C2": "datasets/mixed/hybrid/c2_continuation.json",
+    "C3": "datasets/mixed/hybrid/c3_edited.json",
+    "C4": "datasets/mixed/hybrid/c4_polished.json"
 }
 
 while True:

@@ -19,9 +19,9 @@ def generate_report():
     report.append("")
     
     # Combined v2
-    train_df = pd.read_csv('datasets/combined_v2/train.csv')
-    val_df = pd.read_csv('datasets/combined_v2/val.csv')
-    test_df = pd.read_csv('datasets/combined_v2/test.csv')
+    train_df = pd.read_csv('datasets/active/core_v1/train.csv')
+    val_df = pd.read_csv('datasets/active/core_v1/val.csv')
+    test_df = pd.read_csv('datasets/active/core_v1/test.csv')
     
     report.append(f"总数据量: {len(train_df) + len(val_df) + len(test_df):,} 条")
     report.append(f"  - 训练集: {len(train_df):,}")
@@ -30,14 +30,14 @@ def generate_report():
     report.append("")
     
     # Hybrid数据
-    hybrid_df = pd.read_csv('datasets/hybrid/hybrid_dataset_with_sep.csv')
+    hybrid_df = pd.read_csv('datasets/mixed/hybrid/hybrid_dataset_with_sep.csv')
     report.append(f"混合数据: {len(hybrid_df):,} 条")
     for cat, count in hybrid_df['category'].value_counts().items():
         report.append(f"  - {cat}: {count:,}")
     report.append("")
     
     # Span标注数据
-    with open('datasets/hybrid/c2_span_labels.json', 'r') as f:
+    with open('datasets/mixed/hybrid/c2_span_labels.json', 'r') as f:
         span_data = json.load(f)
     report.append(f"Span标注数据: {len(span_data):,} 条 (C2类别)")
     report.append("")

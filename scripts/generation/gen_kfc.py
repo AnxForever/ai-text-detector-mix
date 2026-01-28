@@ -1,13 +1,22 @@
 #!/usr/bin/env python3
 """C3+C4混合生成 (kfc-api, RPM=12)"""
-import os, json, time, random, hashlib
+import os
+import sys
+import json
+import time
+import random
+import hashlib
 import pandas as pd
 import requests
 
-API = {"url": "https://kfc-api.sxxe.net/v1", "key": "sk-YT09CWSuyzu9tRWANoAmXCuL64JlkLTJl2CY1t6bgUKgePUa"}
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from scripts.utils.api_config import get_proxy_config
+
+remote = get_proxy_config("remote_proxy", "REMOTE_PROXY", "https://api.hotaruapi.top/v1")
+API = {"url": remote["url"], "key": remote["key"]}
 MODELS = ["DeepSeek-V3.1", "cursor2-gpt-5", "kimi-k2-instruct"]
 TOPICS = ["人工智能", "健康生活", "城市发展", "环境保护", "教育问题", "科技创新", "职场经验", "旅行见闻"]
-OUTPUT_DIR = "datasets/hybrid"
+OUTPUT_DIR = "datasets/mixed/hybrid"
 
 def call(model, prompt):
     try:
@@ -28,7 +37,7 @@ def save(data, name):
 
 def main():
     print("kfc-api生成开始...", flush=True)
-    human_df = pd.read_csv("datasets/final_clean/all_human.csv")
+    human_df = pd.read_csv("datasets/active/core_v1/all_human.csv")
     humans = human_df["text"].sample(200).tolist()
     
     c3_results, c4_results = [], []

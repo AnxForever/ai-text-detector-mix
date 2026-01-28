@@ -1,0 +1,11 @@
+{
+  "model_name": "bert-base-chinese",
+  "max_length": 512,
+  "batch_size": 16,
+  "learning_rate": 2e-05,
+  "num_epochs": 5,
+  "warmup_steps": 500,
+  "weight_decay": 0.01,
+  "use_length_weighted_loss": true,
+  "loss_alpha": 0.3
+}

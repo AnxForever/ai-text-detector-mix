@@ -3,23 +3,44 @@
 混合文本数据集构建脚本
 按Gemini报告的SinHAC方案构建C1-C4类数据
 """
-import os, json, time, random, hashlib
+import os
+import sys
+import json
+import time
+import random
+import hashlib
 import pandas as pd
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
-# API配置
-APIS = [
-    {"name": "hybgzs", "url": "https://ai.hybgzs.com/v1", "key": "sk-LQO5p6niHb31gBt_2T_yqGMgiKwgnm9b2os3QCgjuRphSTITFlsnBWFBGCI", 
-     "models": ["gemini-3-pro-preview", "gemini-3-flash-preview", "gpt-4o-mini"], "rpm": 5},
-    {"name": "hotaruapi", "url": "https://api.hotaruapi.top/v1", "key": "sk-WPzv2WwpDbnLp02uro0DyPUy0LyI3VjIRmngMj8fm7BLQqSq",
-     "models": ["gemini-3-pro-preview", "gpt-4.1-mini", "qwen-3-235b-a22b-instruct-2507", "llama-3.3-70b"], "rpm": 10},
-    {"name": "daiju", "url": "https://api.daiju.live/v1", "key": "sk-p14OddEwPKmsWMVkBsmckJrKnMQRo8xSlzOhNcYmAtZ5JSbO",
-     "models": ["DeepSeek-V3.1", "gpt-5", "Qwen3-235B", "llama-3.3-70b"], "rpm": 10},
-]
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from scripts.utils.api_config import get_proxy_config
 
-OUTPUT_DIR = "datasets/hybrid"
+# API配置
+APIS = []
+try:
+    local = get_proxy_config("local_proxy", "LOCAL_PROXY", "http://192.168.60.105:8317/v1")
+    APIS.append(
+        {"name": "local_proxy", "url": local["url"], "key": local["key"],
+         "models": ["glm-4.7", "qwen3-32b", "deepseek-v3.1"], "rpm": 5}
+    )
+except RuntimeError:
+    pass
+
+try:
+    remote = get_proxy_config("remote_proxy", "REMOTE_PROXY", "https://api.hotaruapi.top/v1")
+    APIS.append(
+        {"name": "remote_proxy", "url": remote["url"], "key": remote["key"],
+         "models": ["gemini-3-pro-preview", "gpt-4.1-mini", "qwen-3-235b-a22b-instruct-2507", "llama-3.3-70b"], "rpm": 10}
+    )
+except RuntimeError:
+    pass
+
+if not APIS:
+    raise SystemExit("Missing proxy config. Set config/api.local.json or env for LOCAL/REMOTE proxies.")
+
+OUTPUT_DIR = "datasets/mixed/hybrid"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 def call_api(api, model, messages, max_tokens=500):
@@ -40,7 +61,7 @@ def gen_text_id(text):
 
 def load_human_texts():
     """加载人类文本作为素材"""
-    df = pd.read_csv("datasets/final_clean/all_human.csv")
+    df = pd.read_csv("datasets/active/core_v1/all_human.csv")
     return df["text"].tolist()
 
 # ========== C1: 纯AI生成 ==========

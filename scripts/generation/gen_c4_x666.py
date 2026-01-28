@@ -1,12 +1,21 @@
 #!/usr/bin/env python3
 """C4: 人类+AI润色 (使用x666.me)"""
-import os, json, time, random, hashlib
+import os
+import sys
+import json
+import time
+import random
+import hashlib
 import pandas as pd
 import requests
 
-API = {"url": "https://x666.me/v1", "key": "sk-6igx2LDfddaSqTGaK1izWRN6bLsMDBd5DVeImqMCF1mK1ipS"}
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from scripts.utils.api_config import get_proxy_config
+
+remote = get_proxy_config("remote_proxy", "REMOTE_PROXY", "https://api.hotaruapi.top/v1")
+API = {"url": remote["url"], "key": remote["key"]}
 MODELS = ["gemini-3-flash-preview", "gpt-5.2", "gpt-4.1-mini"]
-OUTPUT = "datasets/hybrid/c4_polished_x666.json"
+OUTPUT = "datasets/mixed/hybrid/c4_polished_x666.json"
 
 def call(model, prompt):
     try:
@@ -27,7 +36,7 @@ def save(data):
 
 def main():
     print("C4(x666)开始...", flush=True)
-    human_df = pd.read_csv("datasets/final_clean/all_human.csv")
+    human_df = pd.read_csv("datasets/active/core_v1/all_human.csv")
     humans = human_df["text"].sample(150).tolist()
     
     results = []

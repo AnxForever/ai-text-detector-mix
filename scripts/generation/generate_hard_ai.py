@@ -1,17 +1,22 @@
 #!/usr/bin/env python3
 """生成困难AI样本：模仿人类风格"""
-import os, json, random
+import os
+import json
+import random
+import sys
+
 import pandas as pd
 from openai import OpenAI
 
-client = OpenAI(
-    api_key="sk-WPzv2WwpDbnLp02uro0DyPUy0LyI3VjIRmngMj8fm7BLQqSq",
-    base_url="https://api.hotaruapi.top/v1"
-)
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from scripts.utils.api_config import get_proxy_config
+
+API = get_proxy_config("remote_proxy", "REMOTE_PROXY", "https://api.hotaruapi.top/v1")
+client = OpenAI(api_key=API["key"], base_url=API["url"])
 MODEL = "deepseek-ai/deepseek-v3.1"
 
 # 从人类文本中采样作为风格参考
-human_df = pd.read_csv('datasets/final_clean/all_human.csv')
+human_df = pd.read_csv('datasets/active/core_v1/all_human.csv')
 human_samples = human_df.sample(50)['text'].tolist()
 
 PROMPTS = [

@@ -4,10 +4,16 @@
 import requests
 import json
 import time
+import os
+import sys
 from pathlib import Path
 
-API_KEY = "sk-WPzv2WwpDbnLp02uro0DyPUy0LyI3VjIRmngMj8fm7BLQqSq"
-API_BASE = "https://api.hotaruapi.top/v1"
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from scripts.utils.api_config import get_proxy_config
+
+remote = get_proxy_config("remote_proxy", "REMOTE_PROXY", "https://api.hotaruapi.top/v1")
+API_KEY = remote["key"]
+API_BASE = remote["url"]
 MODEL = "deepseek-ai/deepseek-v3.1"
 
 # 生成主题列表

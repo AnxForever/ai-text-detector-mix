@@ -137,7 +137,7 @@ def main():
     print(f"Device: {device}\n")
     
     # Load data
-    with open('datasets/hybrid/c2_span_labels.json', 'r', encoding='utf-8') as f:
+    with open('datasets/mixed/hybrid/c2_span_labels.json', 'r', encoding='utf-8') as f:
         data = json.load(f)
     
     print(f"Total samples: {len(data)}")

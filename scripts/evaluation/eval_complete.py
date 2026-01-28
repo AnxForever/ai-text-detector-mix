@@ -58,7 +58,7 @@ def main():
     print("=" * 80)
     print("1. 整体测试集评估")
     print("=" * 80)
-    test_df = pd.read_csv('datasets/combined_v2/test.csv')
+    test_df = pd.read_csv('datasets/active/core_v1/test.csv')
     test_dataset = TextDataset(test_df['text'].tolist(), test_df['label'].tolist(), tokenizer)
     test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False)
     
@@ -79,7 +79,7 @@ def main():
     print("\n" + "=" * 80)
     print("2. 混合数据测试集评估")
     print("=" * 80)
-    hybrid_df = pd.read_csv('datasets/combined_v2/test_hybrid_only.csv')
+    hybrid_df = pd.read_csv('datasets/mixed/hybrid/hybrid_dataset_with_sep.csv')
     
     print(f"\n总样本数: {len(hybrid_df)}")
     print(f"类别分布:")

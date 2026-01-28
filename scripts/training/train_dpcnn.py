@@ -59,9 +59,9 @@ def train():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"使用设备: {device}")
     
-    train_df = pd.read_csv('datasets/final_clean/train.csv')
-    val_df = pd.read_csv('datasets/final_clean/val.csv')
-    test_df = pd.read_csv('datasets/final_clean/test.csv')
+    train_df = pd.read_csv('datasets/active/core_v1/train.csv')
+    val_df = pd.read_csv('datasets/active/core_v1/val.csv')
+    test_df = pd.read_csv('datasets/active/core_v1/test.csv')
     
     print(f"训练集: {len(train_df)}, 验证集: {len(val_df)}, 测试集: {len(test_df)}")
     

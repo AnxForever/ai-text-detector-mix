@@ -58,7 +58,7 @@ def main():
     
     # Test on overall test set
     print("\n=== Overall Test Set ===")
-    test_df = pd.read_csv('datasets/combined/test.csv')
+    test_df = pd.read_csv('datasets/active/core_v1/test.csv')
     test_dataset = TextDataset(test_df['text'].tolist(), test_df['label'].tolist(), tokenizer)
     test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False)
     
@@ -72,7 +72,7 @@ def main():
     
     # Test on hybrid-only test set
     print("\n=== Hybrid-Only Test Set ===")
-    hybrid_df = pd.read_csv('datasets/combined/test_hybrid_only.csv')
+    hybrid_df = pd.read_csv('datasets/mixed/hybrid/hybrid_dataset_with_sep.csv')
     
     # Per-category accuracy
     for category in ['C2', 'C3', 'C4', 'Human']:

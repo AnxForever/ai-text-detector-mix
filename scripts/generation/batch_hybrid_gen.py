@@ -7,18 +7,22 @@ import pandas as pd
 
 sys.stdout.reconfigure(line_buffering=True)
 
-client = OpenAI(base_url="http://192.168.60.105:8317/v1", api_key="cliproxyapi-test-key-2026")
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from scripts.utils.api_config import get_proxy_config
+
+API = get_proxy_config("local_proxy", "LOCAL_PROXY", "http://192.168.60.105:8317/v1")
+client = OpenAI(base_url=API["url"], api_key=API["key"])
 MODELS = ["gemini-2.5-flash", "qwen3-235b-a22b-instruct", "glm-4.7"]
 
 # 加载人类文本和AI文本
 def load_texts():
     human, ai = [], []
     try:
-        df = pd.read_csv('datasets/final_clean/all_human.csv')
+        df = pd.read_csv('datasets/active/core_v1/all_human.csv')
         human = [t for t in df['text'].tolist() if len(str(t)) > 100][:3000]
     except: pass
     try:
-        df = pd.read_csv('datasets/final_clean/all_ai.csv')
+        df = pd.read_csv('datasets/active/core_v1/all_ai.csv')
         ai = [t for t in df['text'].tolist() if len(str(t)) > 100][:3000]
     except: pass
     return human, ai
@@ -116,7 +120,7 @@ def main():
         # 每轮保存
         for cat in results:
             if results[cat]:
-                with open(f'datasets/hybrid/{cat.lower()}_batch.json', 'w') as f:
+                with open(f'datasets/mixed/hybrid/{cat.lower()}_batch.json', 'w') as f:
                     json.dump(results[cat], f, ensure_ascii=False, indent=2)
         
         print(f"Saved: C2={len(results['C2'])}, C3={len(results['C3'])}, C4={len(results['C4'])}")

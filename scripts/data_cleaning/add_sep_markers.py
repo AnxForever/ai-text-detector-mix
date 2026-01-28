@@ -3,13 +3,13 @@ import pandas as pd
 import json
 
 # Load expanded hybrid dataset
-df = pd.read_csv('datasets/hybrid/hybrid_dataset_expanded.csv')
+df = pd.read_csv('datasets/mixed/hybrid/hybrid_dataset_expanded.csv')
 print(f"Total samples: {len(df)}")
 print(df['category'].value_counts())
 
 # Load all C2 data with boundary info
 import glob
-c2_files = glob.glob('datasets/hybrid/c2*.json')
+c2_files = glob.glob('datasets/mixed/hybrid/c2*.json')
 print(f"Found C2 files: {len(c2_files)}")
 
 boundary_map = {}
@@ -42,8 +42,8 @@ print(f"\nUpdated with [SEP]: {updated}/{len(c2_df)}")
 print(f"No boundary info: {no_boundary}/{len(c2_df)}")
 
 # Save updated dataset
-df.to_csv('datasets/hybrid/hybrid_dataset_with_sep.csv', index=False)
-print(f"\nSaved to: datasets/hybrid/hybrid_dataset_with_sep.csv")
+df.to_csv('datasets/mixed/hybrid/hybrid_dataset_with_sep.csv', index=False)
+print(f"\nSaved to: datasets/mixed/hybrid/hybrid_dataset_with_sep.csv")
 
 # Verify
 sample = df[df['category'] == 'C2'].iloc[0]['text']

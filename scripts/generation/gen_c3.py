@@ -1,12 +1,21 @@
 #!/usr/bin/env python3
 """C3: AI生成+改写"""
-import os, json, time, random, hashlib
+import os
+import sys
+import json
+import time
+import random
+import hashlib
 import requests
 
-API = {"url": "https://api.hotaruapi.top/v1", "key": "sk-WPzv2WwpDbnLp02uro0DyPUy0LyI3VjIRmngMj8fm7BLQqSq", "models": ["gemini-3-pro-preview", "gpt-4.1-mini"]}
-OUTPUT = "datasets/hybrid/c3_edited.json"
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from scripts.utils.api_config import get_proxy_config
+
+remote = get_proxy_config("remote_proxy", "REMOTE_PROXY", "https://api.hotaruapi.top/v1")
+API = {"url": remote["url"], "key": remote["key"], "models": ["gemini-3-pro-preview", "gpt-4.1-mini"]}
+OUTPUT = "datasets/mixed/hybrid/c3_edited.json"
 TOPICS = ["人工智能", "健康生活", "城市发展", "环境保护", "教育问题", "网络文化", "传统节日", "科技创新", "职场经验", "旅行见闻"]
-os.makedirs("datasets/hybrid", exist_ok=True)
+os.makedirs("datasets/mixed/hybrid", exist_ok=True)
 
 def call_api(model, prompt):
     try:

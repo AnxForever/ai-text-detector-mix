@@ -1,0 +1,241 @@
+{
+  "run_name": "scenario_fill_10h_multi_proxies_v3",
+  "output_dir": "datasets/generated/scenario_fill/2026-01-27_10h_multi_proxies",
+  "template_path": "docs/plans/ai_generation_templates_v2_mapped_2026-01-28.yaml",
+  "constraints_version": "v2",
+  "proxy_pool": [
+    {
+      "proxy_name": "local_proxy",
+      "proxy_env_prefix": "LOCAL_PROXY",
+      "proxy_base_url": "http://192.168.60.105:8317/v1",
+      "models": [
+        "glm-4.7",
+        "gpt-4",
+        "deepseek-v3.2"
+      ],
+      "request_delay": 0.5
+    },
+    {
+      "proxy_name": "hybgzs_proxy",
+      "proxy_env_prefix": "HYBGZS_PROXY",
+      "proxy_base_url": "https://ai.hybgzs.com/v1",
+      "models_from_api": true,
+      "model_include": [
+        "gemini-3"
+      ],
+      "model_exclude": [
+        "image",
+        "audio",
+        "tts",
+        "vision"
+      ],
+      "max_models": 6,
+      "request_delay": 5
+    },
+    {
+      "proxy_name": "hotaru_proxy",
+      "proxy_env_prefix": "HOTARU_PROXY",
+      "proxy_base_url": "https://api.hotaruapi.top/v1",
+      "models": [
+        "gpt-5"
+      ],
+      "request_delay": 0.5
+    },
+    {
+      "proxy_name": "china184_proxy",
+      "proxy_env_prefix": "CHINA184_PROXY",
+      "proxy_base_url": "https://china.184772.xyz/v1",
+      "models": [
+        "gpt-oss-120b"
+      ],
+      "request_delay": 0.5
+    },
+    {
+      "proxy_name": "x666_proxy",
+      "proxy_env_prefix": "X666_PROXY",
+      "proxy_base_url": "https://x666.me/v1",
+      "models": [
+        "gpt-5.2"
+      ],
+      "request_delay": 0.5
+    },
+    {
+      "proxy_name": "nvidia",
+      "proxy_env_prefix": "NVIDIA",
+      "proxy_base_url": "https://integrate.api.nvidia.com/v1",
+      "models": [
+        "meta/llama-3.1-405b-instruct"
+      ],
+      "request_delay": 0.5
+    },
+    {
+      "proxy_name": "crisxie_proxy",
+      "proxy_env_prefix": "CRISXIE_PROXY",
+      "proxy_base_url": "https://api.crisxie.top/v1",
+      "models": [
+        "gpt-5.2"
+      ],
+      "request_delay": 0.5
+    }
+  ],
+  "decoding_profiles": [
+    {
+      "name": "conservative",
+      "temperature": 0.2,
+      "top_p": 0.9,
+      "max_tokens": 1200
+    },
+    {
+      "name": "diverse",
+      "temperature": 0.7,
+      "top_p": 0.95,
+      "max_tokens": 1200
+    }
+  ],
+  "request_delay": 0.5,
+  "request_interval": 0.5,
+  "concurrency": 15,
+  "max_attempts": 2,
+  "request_timeout": 120,
+  "clean_forbidden_phrases": true,
+  "tasks": [
+    {
+      "scenario_id": "A",
+      "scenario": "education",
+      "style_plan": "explanation",
+      "length_bucket": "200-500",
+      "target_count": 824,
+      "priority": "P0"
+    },
+    {
+      "scenario_id": "A",
+      "scenario": "education",
+      "style_plan": "report",
+      "length_bucket": "1000-2000",
+      "target_count": 706,
+      "priority": "P0"
+    },
+    {
+      "scenario_id": "A",
+      "scenario": "education",
+      "style_plan": "list",
+      "length_bucket": "500-1000",
+      "target_count": 471,
+      "priority": "P0"
+    },
+    {
+      "scenario_id": "B",
+      "scenario": "workplace",
+      "style_plan": "report",
+      "length_bucket": "80-200",
+      "target_count": 834,
+      "priority": "P0"
+    },
+    {
+      "scenario_id": "B",
+      "scenario": "workplace",
+      "style_plan": "report",
+      "length_bucket": "1000-2000",
+      "target_count": 834,
+      "priority": "P0"
+    },
+    {
+      "scenario_id": "C",
+      "scenario": "knowledge",
+      "style_plan": "explanation",
+      "length_bucket": "1000-2000",
+      "target_count": 1467,
+      "priority": "P0"
+    },
+    {
+      "scenario_id": "C",
+      "scenario": "knowledge",
+      "style_plan": "guide",
+      "length_bucket": "200-500",
+      "target_count": 533,
+      "priority": "P0"
+    },
+    {
+      "scenario_id": "D",
+      "scenario": "community",
+      "style_plan": "dialogue",
+      "length_bucket": "80-200",
+      "target_count": 898,
+      "priority": "P0"
+    },
+    {
+      "scenario_id": "D",
+      "scenario": "community",
+      "style_plan": "mixed",
+      "length_bucket": "1000-2000",
+      "target_count": 192,
+      "priority": "P0"
+    },
+    {
+      "scenario_id": "D",
+      "scenario": "community",
+      "style_plan": "mixed",
+      "length_bucket": "200-500",
+      "target_count": 192,
+      "priority": "P0"
+    },
+    {
+      "scenario_id": "D",
+      "scenario": "community",
+      "style_plan": "list",
+      "length_bucket": "500-1000",
+      "target_count": 385,
+      "priority": "P0"
+    },
+    {
+      "scenario_id": "E",
+      "scenario": "commerce",
+      "style_plan": "mixed",
+      "length_bucket": "80-200",
+      "target_count": 313,
+      "priority": "P0"
+    },
+    {
+      "scenario_id": "E",
+      "scenario": "commerce",
+      "style_plan": "report",
+      "length_bucket": "1000-2000",
+      "target_count": 729,
+      "priority": "P0"
+    },
+    {
+      "scenario_id": "E",
+      "scenario": "commerce",
+      "style_plan": "list",
+      "length_bucket": "200-500",
+      "target_count": 625,
+      "priority": "P0"
+    },
+    {
+      "scenario_id": "F",
+      "scenario": "news",
+      "style_plan": "explanation",
+      "length_bucket": "1000-2000",
+      "target_count": 312,
+      "priority": "P0"
+    },
+    {
+      "scenario_id": "F",
+      "scenario": "news",
+      "style_plan": "report",
+      "length_bucket": "80-200",
+      "target_count": 344,
+      "priority": "P0"
+    },
+    {
+      "scenario_id": "F",
+      "scenario": "news",
+      "style_plan": "report",
+      "length_bucket": "500-1000",
+      "target_count": 344,
+      "priority": "P0"
+    }
+  ],
+  "chunk_size": 500,
+  "log_every": 50
+}

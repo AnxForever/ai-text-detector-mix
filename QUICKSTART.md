@@ -118,6 +118,6 @@ python scripts/evaluation/eval_complete.py
 
 ## 更多信息
 
-- 完整成果报告: [FINAL_RESULTS.md](FINAL_RESULTS.md)
-- 数据集说明: [DATA_AND_MODELS.md](DATA_AND_MODELS.md)
-- 训练计划: [TRAINING_PLAN.md](TRAINING_PLAN.md)
+- 完整成果报告: [docs/project/FINAL_RESULTS.md](docs/project/FINAL_RESULTS.md)
+- 数据集说明: [docs/project/DATA_AND_MODELS.md](docs/project/DATA_AND_MODELS.md)
+- 训练计划: [docs/project/TRAINING_PLAN.md](docs/project/TRAINING_PLAN.md)

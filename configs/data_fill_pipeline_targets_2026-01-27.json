@@ -1,0 +1,328 @@
+{
+  "run_name": "data_fill_run",
+  "output_root": "datasets/planning/data_fill_runs",
+  "generated_at": "2026-01-27 15:28:06",
+  "human_collection": {
+    "enabled": true,
+    "sources": [
+      {
+        "source_type": "open_source",
+        "notes": "README list sections, config docs, FAQ"
+      }
+    ]
+  },
+  "ai_generation": {
+    "enabled": false,
+    "models": [],
+    "decoding_profiles": [],
+    "templates": []
+  },
+  "targets": [
+    {
+      "label": "HUMAN",
+      "style": "technical_doc",
+      "domain": "software",
+      "length_bucket": "200-500",
+      "target_count": 74,
+      "priority": "P1",
+      "notes": "current=126, target=200"
+    },
+    {
+      "label": "HUMAN",
+      "style": "technical_doc",
+      "domain": "software",
+      "length_bucket": "500-1000",
+      "target_count": 158,
+      "priority": "P1",
+      "notes": "current=42, target=200"
+    },
+    {
+      "label": "HUMAN",
+      "style": "technical_doc",
+      "domain": "software",
+      "length_bucket": "1000-2000",
+      "target_count": 186,
+      "priority": "P1",
+      "notes": "current=14, target=200"
+    },
+    {
+      "label": "HUMAN",
+      "style": "technical_doc",
+      "domain": "ops",
+      "length_bucket": "200-500",
+      "target_count": 120,
+      "priority": "P1",
+      "notes": "current=80, target=200"
+    },
+    {
+      "label": "HUMAN",
+      "style": "technical_doc",
+      "domain": "ops",
+      "length_bucket": "500-1000",
+      "target_count": 158,
+      "priority": "P1",
+      "notes": "current=42, target=200"
+    },
+    {
+      "label": "HUMAN",
+      "style": "technical_doc",
+      "domain": "ops",
+      "length_bucket": "1000-2000",
+      "target_count": 180,
+      "priority": "P1",
+      "notes": "current=20, target=200"
+    },
+    {
+      "label": "HUMAN",
+      "style": "technical_doc",
+      "domain": "ml_ai",
+      "length_bucket": "200-500",
+      "target_count": 162,
+      "priority": "P1",
+      "notes": "current=38, target=200"
+    },
+    {
+      "label": "HUMAN",
+      "style": "technical_doc",
+      "domain": "ml_ai",
+      "length_bucket": "500-1000",
+      "target_count": 174,
+      "priority": "P1",
+      "notes": "current=26, target=200"
+    },
+    {
+      "label": "HUMAN",
+      "style": "technical_doc",
+      "domain": "ml_ai",
+      "length_bucket": "1000-2000",
+      "target_count": 182,
+      "priority": "P1",
+      "notes": "current=18, target=200"
+    },
+    {
+      "label": "HUMAN",
+      "style": "list",
+      "domain": "software",
+      "length_bucket": "200-500",
+      "target_count": 200,
+      "priority": "P0",
+      "notes": "current=0, target=200"
+    },
+    {
+      "label": "HUMAN",
+      "style": "list",
+      "domain": "software",
+      "length_bucket": "500-1000",
+      "target_count": 200,
+      "priority": "P0",
+      "notes": "current=0, target=200"
+    },
+    {
+      "label": "HUMAN",
+      "style": "list",
+      "domain": "software",
+      "length_bucket": "1000-2000",
+      "target_count": 200,
+      "priority": "P0",
+      "notes": "current=0, target=200"
+    },
+    {
+      "label": "HUMAN",
+      "style": "list",
+      "domain": "ops",
+      "length_bucket": "200-500",
+      "target_count": 200,
+      "priority": "P0",
+      "notes": "current=0, target=200"
+    },
+    {
+      "label": "HUMAN",
+      "style": "list",
+      "domain": "ops",
+      "length_bucket": "500-1000",
+      "target_count": 200,
+      "priority": "P0",
+      "notes": "current=0, target=200"
+    },
+    {
+      "label": "HUMAN",
+      "style": "list",
+      "domain": "ops",
+      "length_bucket": "1000-2000",
+      "target_count": 200,
+      "priority": "P0",
+      "notes": "current=0, target=200"
+    },
+    {
+      "label": "HUMAN",
+      "style": "list",
+      "domain": "ml_ai",
+      "length_bucket": "200-500",
+      "target_count": 200,
+      "priority": "P0",
+      "notes": "current=0, target=200"
+    },
+    {
+      "label": "HUMAN",
+      "style": "list",
+      "domain": "ml_ai",
+      "length_bucket": "500-1000",
+      "target_count": 198,
+      "priority": "P1",
+      "notes": "current=2, target=200"
+    },
+    {
+      "label": "HUMAN",
+      "style": "list",
+      "domain": "ml_ai",
+      "length_bucket": "1000-2000",
+      "target_count": 200,
+      "priority": "P0",
+      "notes": "current=0, target=200"
+    },
+    {
+      "label": "AI",
+      "style": "technical_doc",
+      "domain": "software",
+      "length_bucket": "200-500",
+      "target_count": 122,
+      "priority": "P1",
+      "notes": "current=78, target=200"
+    },
+    {
+      "label": "AI",
+      "style": "technical_doc",
+      "domain": "software",
+      "length_bucket": "500-1000",
+      "target_count": 170,
+      "priority": "P1",
+      "notes": "current=30, target=200"
+    },
+    {
+      "label": "AI",
+      "style": "technical_doc",
+      "domain": "software",
+      "length_bucket": "1000-2000",
+      "target_count": 89,
+      "priority": "P1",
+      "notes": "current=111, target=200"
+    },
+    {
+      "label": "AI",
+      "style": "technical_doc",
+      "domain": "ops",
+      "length_bucket": "200-500",
+      "target_count": 157,
+      "priority": "P1",
+      "notes": "current=43, target=200"
+    },
+    {
+      "label": "AI",
+      "style": "technical_doc",
+      "domain": "ops",
+      "length_bucket": "500-1000",
+      "target_count": 187,
+      "priority": "P1",
+      "notes": "current=13, target=200"
+    },
+    {
+      "label": "AI",
+      "style": "technical_doc",
+      "domain": "ops",
+      "length_bucket": "1000-2000",
+      "target_count": 182,
+      "priority": "P1",
+      "notes": "current=18, target=200"
+    },
+    {
+      "label": "AI",
+      "style": "technical_doc",
+      "domain": "ml_ai",
+      "length_bucket": "200-500",
+      "target_count": 180,
+      "priority": "P1",
+      "notes": "current=20, target=200"
+    },
+    {
+      "label": "AI",
+      "style": "technical_doc",
+      "domain": "ml_ai",
+      "length_bucket": "500-1000",
+      "target_count": 188,
+      "priority": "P1",
+      "notes": "current=12, target=200"
+    },
+    {
+      "label": "AI",
+      "style": "technical_doc",
+      "domain": "ml_ai",
+      "length_bucket": "1000-2000",
+      "target_count": 135,
+      "priority": "P1",
+      "notes": "current=65, target=200"
+    },
+    {
+      "label": "AI",
+      "style": "list",
+      "domain": "software",
+      "length_bucket": "200-500",
+      "target_count": 163,
+      "priority": "P1",
+      "notes": "current=37, target=200"
+    },
+    {
+      "label": "AI",
+      "style": "list",
+      "domain": "software",
+      "length_bucket": "500-1000",
+      "target_count": 126,
+      "priority": "P1",
+      "notes": "current=74, target=200"
+    },
+    {
+      "label": "AI",
+      "style": "list",
+      "domain": "ops",
+      "length_bucket": "200-500",
+      "target_count": 189,
+      "priority": "P1",
+      "notes": "current=11, target=200"
+    },
+    {
+      "label": "AI",
+      "style": "list",
+      "domain": "ops",
+      "length_bucket": "500-1000",
+      "target_count": 180,
+      "priority": "P1",
+      "notes": "current=20, target=200"
+    },
+    {
+      "label": "AI",
+      "style": "list",
+      "domain": "ops",
+      "length_bucket": "1000-2000",
+      "target_count": 149,
+      "priority": "P1",
+      "notes": "current=51, target=200"
+    },
+    {
+      "label": "AI",
+      "style": "list",
+      "domain": "ml_ai",
+      "length_bucket": "200-500",
+      "target_count": 176,
+      "priority": "P1",
+      "notes": "current=24, target=200"
+    },
+    {
+      "label": "AI",
+      "style": "list",
+      "domain": "ml_ai",
+      "length_bucket": "500-1000",
+      "target_count": 142,
+      "priority": "P1",
+      "notes": "current=58, target=200"
+    }
+  ]
+}

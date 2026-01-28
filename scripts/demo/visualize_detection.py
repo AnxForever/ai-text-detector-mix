@@ -140,7 +140,7 @@ def main():
     detector = HybridTextDetector()
     
     # 加载测试样本
-    with open('datasets/hybrid/c2_span_labels.json', 'r', encoding='utf-8') as f:
+    with open('datasets/mixed/hybrid/c2_span_labels.json', 'r', encoding='utf-8') as f:
         data = json.load(f)
     
     # 随机选择3个样本演示

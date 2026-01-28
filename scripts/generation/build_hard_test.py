@@ -46,7 +46,7 @@ def humanize_ai_text(text):
 
 def main():
     # 读取AI文本
-    ai_df = pd.read_csv('datasets/final_clean/all_ai.csv')
+    ai_df = pd.read_csv('datasets/active/core_v1/all_ai.csv')
     
     # 随机采样500条进行人类化处理
     samples = ai_df.sample(min(500, len(ai_df)))
@@ -65,7 +65,7 @@ def main():
             })
     
     # 同时采样一些人类文本作为对照
-    human_df = pd.read_csv('datasets/final_clean/all_human.csv')
+    human_df = pd.read_csv('datasets/active/core_v1/all_human.csv')
     human_samples = human_df.sample(min(500, len(human_df)))
     
     for _, row in human_samples.iterrows():

@@ -1,0 +1,154 @@
+{
+  "run_name": "ood_hs_ai_2026-01-28",
+  "output_dir": "datasets/generated/ood_high_stakes/2026-01-28",
+  "template_path": "docs/plans/ood_hs_templates_2026-01-28.yaml",
+  "constraints_version": "v2",
+  "proxy_pool": [
+    {
+      "proxy_name": "local_proxy",
+      "proxy_env_prefix": "LOCAL_PROXY",
+      "proxy_base_url": "http://192.168.60.105:8317/v1",
+      "models": [
+        "glm-4.7",
+        "gpt-4",
+        "deepseek-v3.2"
+      ],
+      "request_delay": 3
+    },
+    {
+      "proxy_name": "hybgzs_proxy",
+      "proxy_env_prefix": "HYBGZS_PROXY",
+      "proxy_base_url": "https://ai.hybgzs.com/v1",
+      "models_from_api": true,
+      "model_include": [
+        "gemini-3"
+      ],
+      "model_exclude": [
+        "image",
+        "audio",
+        "tts",
+        "vision"
+      ],
+      "max_models": 6,
+      "request_delay": 12
+    },
+    {
+      "proxy_name": "nvidia",
+      "proxy_env_prefix": "NVIDIA",
+      "proxy_base_url": "https://integrate.api.nvidia.com/v1",
+      "models": [
+        "meta/llama-3.1-405b-instruct"
+      ],
+      "request_delay": 4
+    }
+  ],
+  "decoding_profiles": [
+    {
+      "name": "conservative",
+      "temperature": 0.2,
+      "top_p": 0.9,
+      "max_tokens": 1200
+    },
+    {
+      "name": "diverse",
+      "temperature": 0.7,
+      "top_p": 0.95,
+      "max_tokens": 1200
+    }
+  ],
+  "request_delay": 3,
+  "max_attempts": 1,
+  "request_timeout": 60,
+  "tasks": [
+    {
+      "scenario_id": "B",
+      "scenario": "workplace",
+      "style_plan": "list",
+      "length_bucket": "500-1000",
+      "target_count": 50,
+      "priority": "P0",
+      "domain_risk": "high_stakes",
+      "hs_domain": "legal",
+      "ood_split": "OOD_HS"
+    },
+    {
+      "scenario_id": "B",
+      "scenario": "workplace",
+      "style_plan": "report",
+      "length_bucket": "1000-2000",
+      "target_count": 50,
+      "priority": "P0",
+      "domain_risk": "high_stakes",
+      "hs_domain": "legal",
+      "ood_split": "OOD_HS"
+    },
+    {
+      "scenario_id": "B",
+      "scenario": "workplace",
+      "style_plan": "guide",
+      "length_bucket": "200-500",
+      "target_count": 50,
+      "priority": "P0",
+      "domain_risk": "high_stakes",
+      "hs_domain": "legal",
+      "ood_split": "OOD_HS"
+    },
+    {
+      "scenario_id": "F",
+      "scenario": "news",
+      "style_plan": "explanation",
+      "length_bucket": "500-1000",
+      "target_count": 50,
+      "priority": "P0",
+      "domain_risk": "high_stakes",
+      "hs_domain": "legal",
+      "ood_split": "OOD_HS"
+    },
+    {
+      "scenario_id": "C",
+      "scenario": "knowledge",
+      "style_plan": "list",
+      "length_bucket": "500-1000",
+      "target_count": 50,
+      "priority": "P0",
+      "domain_risk": "high_stakes",
+      "hs_domain": "finance",
+      "ood_split": "OOD_HS"
+    },
+    {
+      "scenario_id": "C",
+      "scenario": "knowledge",
+      "style_plan": "guide",
+      "length_bucket": "200-500",
+      "target_count": 50,
+      "priority": "P0",
+      "domain_risk": "high_stakes",
+      "hs_domain": "finance",
+      "ood_split": "OOD_HS"
+    },
+    {
+      "scenario_id": "F",
+      "scenario": "news",
+      "style_plan": "report",
+      "length_bucket": "1000-2000",
+      "target_count": 50,
+      "priority": "P0",
+      "domain_risk": "high_stakes",
+      "hs_domain": "finance",
+      "ood_split": "OOD_HS"
+    },
+    {
+      "scenario_id": "C",
+      "scenario": "knowledge",
+      "style_plan": "explanation",
+      "length_bucket": "500-1000",
+      "target_count": 50,
+      "priority": "P0",
+      "domain_risk": "high_stakes",
+      "hs_domain": "finance",
+      "ood_split": "OOD_HS"
+    }
+  ],
+  "chunk_size": 200,
+  "log_every": 25
+}

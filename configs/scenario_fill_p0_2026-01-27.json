@@ -1,0 +1,48 @@
+﻿{
+  "run_name": "scenario_fill_p0",
+  "output_dir": "datasets/generated/scenario_fill/2026-01-27_p0",
+  "constraints_version": "v2",
+  "models": [
+    "deepseek-v3.1",
+    "glm-4.6",
+    "qwen3-32b"
+  ],
+  "decoding_profiles": [
+    {
+      "name": "conservative",
+      "temperature": 0.2,
+      "top_p": 0.9,
+      "max_tokens": 900
+    },
+    {
+      "name": "diverse",
+      "temperature": 0.7,
+      "top_p": 0.95,
+      "max_tokens": 900
+    }
+  ],
+  "request_delay": 1.0,
+  "max_attempts": 3,
+  "request_timeout": 60,
+  "tasks": [
+    {"scenario_id": "A", "scenario": "education", "style_plan": "list", "length_bucket": "200-500", "target_count": 80, "priority": "P0"},
+    {"scenario_id": "A", "scenario": "education", "style_plan": "guide", "length_bucket": "200-500", "target_count": 80, "priority": "P0"},
+    {"scenario_id": "A", "scenario": "education", "style_plan": "list", "length_bucket": "500-1000", "target_count": 80, "priority": "P0"},
+    {"scenario_id": "A", "scenario": "education", "style_plan": "guide", "length_bucket": "500-1000", "target_count": 80, "priority": "P0"},
+
+    {"scenario_id": "C", "scenario": "knowledge", "style_plan": "list", "length_bucket": "200-500", "target_count": 80, "priority": "P0"},
+    {"scenario_id": "C", "scenario": "knowledge", "style_plan": "guide", "length_bucket": "200-500", "target_count": 80, "priority": "P0"},
+    {"scenario_id": "C", "scenario": "knowledge", "style_plan": "list", "length_bucket": "500-1000", "target_count": 80, "priority": "P0"},
+    {"scenario_id": "C", "scenario": "knowledge", "style_plan": "guide", "length_bucket": "500-1000", "target_count": 80, "priority": "P0"},
+
+    {"scenario_id": "D", "scenario": "community", "style_plan": "list", "length_bucket": "200-500", "target_count": 80, "priority": "P0"},
+    {"scenario_id": "D", "scenario": "community", "style_plan": "guide", "length_bucket": "200-500", "target_count": 80, "priority": "P0"},
+    {"scenario_id": "D", "scenario": "community", "style_plan": "list", "length_bucket": "500-1000", "target_count": 80, "priority": "P0"},
+    {"scenario_id": "D", "scenario": "community", "style_plan": "guide", "length_bucket": "500-1000", "target_count": 80, "priority": "P0"},
+
+    {"scenario_id": "E", "scenario": "commerce", "style_plan": "list", "length_bucket": "200-500", "target_count": 60, "priority": "P0"},
+    {"scenario_id": "E", "scenario": "commerce", "style_plan": "guide", "length_bucket": "200-500", "target_count": 60, "priority": "P0"},
+    {"scenario_id": "E", "scenario": "commerce", "style_plan": "list", "length_bucket": "500-1000", "target_count": 60, "priority": "P0"},
+    {"scenario_id": "E", "scenario": "commerce", "style_plan": "guide", "length_bucket": "500-1000", "target_count": 60, "priority": "P0"}
+  ]
+}

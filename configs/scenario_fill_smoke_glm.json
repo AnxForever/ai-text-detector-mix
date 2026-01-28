@@ -1,0 +1,15 @@
+﻿{
+  "run_name": "scenario_fill_smoke_glm",
+  "output_dir": "datasets/generated/scenario_fill/smoke_glm",
+  "constraints_version": "v2",
+  "models": ["glm-4.6"],
+  "decoding_profiles": [
+    {"name": "conservative", "temperature": 0.2, "top_p": 0.9, "max_tokens": 700}
+  ],
+  "request_delay": 0.3,
+  "max_attempts": 2,
+  "request_timeout": 20,
+  "tasks": [
+    {"scenario_id": "A", "scenario": "education", "style_plan": "list", "length_bucket": "200-500", "target_count": 1, "priority": "P0"}
+  ]
+}

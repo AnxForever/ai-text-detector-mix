@@ -5,8 +5,11 @@ sys.stdout.reconfigure(line_buffering=True)
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from openai import OpenAI
 
-# 本地代理
-client = OpenAI(base_url="http://192.168.60.105:8317/v1", api_key="cliproxyapi-test-key-2026")
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from scripts.utils.api_config import get_proxy_config
+
+API = get_proxy_config("local_proxy", "LOCAL_PROXY", "http://192.168.60.105:8317/v1")
+client = OpenAI(base_url=API["url"], api_key=API["key"])
 
 REWRITE_PROMPTS = [
     "请将以下文本改写得更口语化，保持原意：\n\n{text}",
@@ -21,7 +24,7 @@ def load_ai_texts():
     texts = []
     # 从原始AI数据加载
     try:
-        with open('datasets/final_clean/all_ai.csv', 'r') as f:
+        with open('datasets/active/core_v1/all_ai.csv', 'r') as f:
             import csv
             reader = csv.DictReader(f)
             for row in reader:
@@ -74,7 +77,7 @@ def main():
                 if len(results) % 50 == 0:
                     print(f"Progress: {len(results)}/{target}")
     
-    out_path = 'datasets/hybrid/c3_new.json'
+    out_path = 'datasets/mixed/hybrid/c3_new.json'
     with open(out_path, 'w') as f:
         json.dump(results, f, ensure_ascii=False, indent=2)
     print(f"Saved {len(results)} to {out_path}")

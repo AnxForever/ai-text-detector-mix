@@ -1,16 +1,24 @@
 #!/usr/bin/env python3
 """C3+C4混合生成（边生成边保存）"""
-import os, json, time, random, hashlib
+import os
+import sys
+import json
+import time
+import random
+import hashlib
 import pandas as pd
 import requests
 
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from scripts.utils.api_config import get_proxy_config
+
+remote = get_proxy_config("remote_proxy", "REMOTE_PROXY", "https://api.hotaruapi.top/v1")
 APIS = {
-    "hotaru": {"url": "https://api.hotaruapi.top/v1", "key": "sk-WPzv2WwpDbnLp02uro0DyPUy0LyI3VjIRmngMj8fm7BLQqSq"},
-    "hybgzs": {"url": "https://ai.hybgzs.com/v1", "key": "sk-LQO5p6niHb31gBt_2T_yqGMgiKwgnm9b2os3QCgjuRphSTITFlsnBWFBGCI"},
+    "remote": {"url": remote["url"], "key": remote["key"]},
 }
 MODELS = ["gemini-3-pro-preview", "gpt-4.1-mini"]
 TOPICS = ["人工智能", "健康生活", "城市发展", "环境保护", "教育问题", "科技创新", "职场经验", "旅行见闻"]
-OUTPUT_DIR = "datasets/hybrid"
+OUTPUT_DIR = "datasets/mixed/hybrid"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 def call(api_name, model, prompt):
@@ -33,7 +41,7 @@ def save(data, filename):
 
 def main():
     print("加载人类文本...", flush=True)
-    human_df = pd.read_csv("datasets/final_clean/all_human.csv")
+    human_df = pd.read_csv("datasets/active/core_v1/all_human.csv")
     humans = human_df["text"].sample(300).tolist()
     
     c3_results, c4_results = [], []
@@ -44,12 +52,12 @@ def main():
         topic = random.choice(TOPICS)
         m1, m2 = random.sample(MODELS, 2)
         
-        text = call("hotaru", m1, f"写一段关于{topic}的短文，150字左右。")
+        text = call("remote", m1, f"写一段关于{topic}的短文，150字左右。")
         if not text:
             time.sleep(8)
             continue
         
-        edited = call("hotaru", m2, f"改写这段话使其更口语化自然：\n{text}")
+        edited = call("remote", m2, f"改写这段话使其更口语化自然：\n{text}")
         if edited and len(edited) > 50:
             c3_results.append({
                 "text_id": hashlib.md5(edited.encode()).hexdigest()[:12],
@@ -67,9 +75,7 @@ def main():
             continue
         
         model = random.choice(MODELS)
-        api = "hybgzs" if "gemini" in model else "hotaru"
-        
-        polished = call(api, model, f"润色这段文字使其更通顺，保持原意：\n{h}")
+        polished = call("remote", model, f"润色这段文字使其更通顺，保持原意：\n{h}")
         if polished and len(polished) > 30:
             c4_results.append({
                 "text_id": hashlib.md5(polished.encode()).hexdigest()[:12],

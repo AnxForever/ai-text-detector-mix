@@ -41,7 +41,13 @@ evaluation_results/
 
 # 配置文件（可能包含敏感信息）
 config/api.txt
+config/api.local.json
+config/*.local.json
 .claude/
+api/API_KEYS.md
+**/API_KEYS.md
+*.secret
+*.secrets
 
 # 系统文件
 .DS_Store
@@ -58,6 +64,11 @@ Thumbs.db
 new_plan_datasets/
 archive/old_datasets/
 fonts/
+
+# 生成的数据目录（太大，不跟踪）
+datasets/generated/
+datasets/logs/
+datasets/planning/
 
 # 特殊文件
 Antigravity.exe

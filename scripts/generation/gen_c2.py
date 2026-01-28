@@ -1,15 +1,34 @@
 #!/usr/bin/env python3
 """C2: 人类开头+AI续写 (多模型)"""
-import os, json, time, random, hashlib
+import os
+import sys
+import json
+import time
+import random
+import hashlib
 import pandas as pd
 import requests
 
-APIS = [
-    {"url": "https://api.hotaruapi.top/v1", "key": "sk-WPzv2WwpDbnLp02uro0DyPUy0LyI3VjIRmngMj8fm7BLQqSq", "models": ["gpt-4.1-mini", "qwen-3-235b-a22b-instruct-2507", "llama-3.3-70b"]},
-    {"url": "https://api.daiju.live/v1", "key": "sk-p14OddEwPKmsWMVkBsmckJrKnMQRo8xSlzOhNcYmAtZ5JSbO", "models": ["DeepSeek-V3.1", "gpt-5", "Qwen3-235B"]},
-]
-OUTPUT = "datasets/hybrid/c2_continuation.json"
-os.makedirs("datasets/hybrid", exist_ok=True)
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from scripts.utils.api_config import get_proxy_config
+
+APIS = []
+try:
+    local = get_proxy_config("local_proxy", "LOCAL_PROXY", "http://192.168.60.105:8317/v1")
+    APIS.append({"url": local["url"], "key": local["key"], "models": ["glm-4.7", "qwen3-32b", "deepseek-v3.1"]})
+except RuntimeError:
+    pass
+
+try:
+    remote = get_proxy_config("remote_proxy", "REMOTE_PROXY", "https://api.hotaruapi.top/v1")
+    APIS.append({"url": remote["url"], "key": remote["key"], "models": ["gpt-4.1-mini", "qwen-3-235b-a22b-instruct-2507", "llama-3.3-70b"]})
+except RuntimeError:
+    pass
+
+if not APIS:
+    raise SystemExit("Missing proxy config. Set config/api.local.json or env for LOCAL/REMOTE proxies.")
+OUTPUT = "datasets/mixed/hybrid/c2_continuation.json"
+os.makedirs("datasets/mixed/hybrid", exist_ok=True)
 
 def call_api(api, model, prompt):
     try:
@@ -24,7 +43,7 @@ def call_api(api, model, prompt):
     return None
 
 def main():
-    human_df = pd.read_csv("datasets/final_clean/all_human.csv")
+    human_df = pd.read_csv("datasets/active/core_v1/all_human.csv")
     humans = human_df["text"].sample(400).tolist()
     
     results = []

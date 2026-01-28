@@ -1,0 +1,74 @@
+{
+  "run_name": "data_fill_run",
+  "output_root": "datasets/planning/data_fill_runs",
+  "human_collection": {
+    "enabled": true,
+    "sources": [
+      {
+        "source_type": "open_source",
+        "notes": "README list sections, config docs, FAQ"
+      }
+    ]
+  },
+  "ai_generation": {
+    "enabled": false,
+    "models": [
+      {
+        "family": "gpt",
+        "name": "gpt-4o",
+        "provider": "openai"
+      }
+    ],
+    "decoding_profiles": [
+      {
+        "name": "conservative",
+        "temperature": 0.2,
+        "top_p": 0.9,
+        "max_tokens": 1200
+      },
+      {
+        "name": "diverse",
+        "temperature": 0.7,
+        "top_p": 0.95,
+        "max_tokens": 1200
+      }
+    ],
+    "templates": [
+      {
+        "prompt_id": "TD-SW-001",
+        "style": "technical_doc",
+        "domain": "software",
+        "length_bucket": "500-1000"
+      }
+    ]
+  },
+  "targets": [
+    {
+      "label": "HUMAN",
+      "style": "list",
+      "domain": "software",
+      "length_bucket": "200-500",
+      "target_count": 200,
+      "priority": "P0",
+      "notes": "Use open-source README checklists"
+    },
+    {
+      "label": "HUMAN",
+      "style": "list",
+      "domain": "ops",
+      "length_bucket": "500-1000",
+      "target_count": 200,
+      "priority": "P0",
+      "notes": "Ops troubleshooting lists"
+    },
+    {
+      "label": "AI",
+      "style": "technical_doc",
+      "domain": "ml_ai",
+      "length_bucket": "500-1000",
+      "target_count": 200,
+      "priority": "P1",
+      "notes": "Generate after API ready"
+    }
+  ]
+}

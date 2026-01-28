@@ -139,7 +139,7 @@ def main():
     
     # 处理所有C2数据文件
     import glob
-    c2_files = glob.glob('datasets/hybrid/c2*.json')
+    c2_files = glob.glob('datasets/mixed/hybrid/c2*.json')
     
     print(f"Found {len(c2_files)} C2 files")
     
@@ -180,7 +180,7 @@ def main():
                 pass
     
     # 保存
-    output_file = 'datasets/hybrid/c2_span_labels.json'
+    output_file = 'datasets/mixed/hybrid/c2_span_labels.json'
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(all_processed, f, ensure_ascii=False, indent=2)
     

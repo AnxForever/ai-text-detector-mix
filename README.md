@@ -3,7 +3,7 @@
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.12-green.svg)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red.svg)](https://pytorch.org/)
-[![Accuracy](https://img.shields.io/badge/Accuracy-98.71%25-brightgreen.svg)](FINAL_RESULTS.md)
+[![Accuracy](https://img.shields.io/badge/Accuracy-98.71%25-brightgreen.svg)](docs/project/FINAL_RESULTS.md)
 
 > 中文AI文本检测系统 - 基于边界标记的混合文本检测
 
@@ -22,13 +22,7 @@
 - 🔥 **双层检测架构**: 分类器 + 边界检测器
 - 🔥 **Token级精确定位**: 实现细粒度边界检测
 
-📖 **完整成果**: [FINAL_RESULTS.md](FINAL_RESULTS.md) | **数据模型**: [DATA_AND_MODELS.md](DATA_AND_MODELS.md)
-
-## 🤗 Hugging Face模型
-
-- 🔥 [BERT分类器](https://huggingface.co/AnxForever/chinese-ai-detector-bert) - 98.71%准确率
-- 🎯 [边界检测器](https://huggingface.co/AnxForever/chinese-ai-detector-span) - Token级定位
-- 📊 [训练数据集](https://huggingface.co/datasets/AnxForever/chinese-ai-detection-dataset) - 66K样本
+📖 **完整成果**: [docs/project/FINAL_RESULTS.md](docs/project/FINAL_RESULTS.md) | **数据模型**: [docs/project/DATA_AND_MODELS.md](docs/project/DATA_AND_MODELS.md)
 
 ## 🤗 Hugging Face模型
 
@@ -66,11 +60,13 @@ python scripts/evaluation/generate_report.py
 
 ```
 datacollection/
-├── 📖 核心文档
+├── 📖 文档
 │   ├── README.md              # 本文档
-│   ├── FINAL_RESULTS.md       # 最终成果报告 ⭐
-│   ├── TRAINING_PLAN.md       # 训练计划
-│   └── API_KEYS.md            # API配置
+│   ├── QUICKSTART.md          # 快速开始
+│   ├── docs/                  # 统一文档目录
+│   │   ├── project/           # 项目核心文档
+│   │   └── plans/             # 计划与审计
+│   └── api/                   # API代码与配置
 │
 ├── 🤖 模型 (779MB)
 │   ├── bert_v2_with_sep/      # 主分类器 (98.71%准确率)
@@ -140,8 +136,8 @@ datacollection/
 
 ## 📞 更多信息
 
-- 完整成果: [FINAL_RESULTS.md](FINAL_RESULTS.md)
-- 训练计划: [TRAINING_PLAN.md](TRAINING_PLAN.md)
+- 完整成果: [docs/project/FINAL_RESULTS.md](docs/project/FINAL_RESULTS.md)
+- 训练计划: [docs/project/TRAINING_PLAN.md](docs/project/TRAINING_PLAN.md)
 - 评估报告: `evaluation_results/final_report.txt`
 
 ---

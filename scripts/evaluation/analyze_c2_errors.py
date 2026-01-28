@@ -40,7 +40,7 @@ def analyze_c2_errors():
     model.eval()
     
     # Load C2 test data (from combined_v2)
-    hybrid_df = pd.read_csv('datasets/combined_v2/test_hybrid_only.csv')
+    hybrid_df = pd.read_csv('datasets/mixed/hybrid/hybrid_dataset_with_sep.csv')
     c2_df = hybrid_df[hybrid_df['category'] == 'C2'].copy()
     
     print(f"Analyzing {len(c2_df)} C2 samples...")
