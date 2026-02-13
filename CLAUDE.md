@@ -27,8 +27,8 @@
                      ▼                                                       ▼
          ┌───────────────────────┐                              ┌───────────────────────┐
          │  分类器 (Classifier)  │                              │   边界检测器 (Span)   │
-         │  bert_v2_with_sep     │                              │  bert_span_detector   │
-         │  准确率: 98.71%       │                              │  Token准确率: 96.69%  │
+         │  bert_v11c_boundary  │                              │  bert_span_detector   │
+         │  三集平均: 98.56%     │                              │  Token准确率: 96.69%  │
          └───────────────────────┘                              └───────────────────────┘
 ```
 
@@ -61,9 +61,9 @@ graph TD
     C --> C5["demo"]
     C --> C6["utils"]
 
-    D --> D1["bert_v2_with_sep"]
+    D --> D1["bert_v11c_boundary_fix"]
     D --> D2["bert_span_detector"]
-    D --> D3["bert_improved"]
+    D --> D3["bert_v10_augmented"]
 
     E --> E1["active"]
     E --> E2["mixed"]
@@ -159,10 +159,9 @@ export PYTHONIOENCODING=utf-8     # 中文编码
 
 | 指标 | 数值 |
 |-----|------|
-| 整体准确率 | 98.71% |
-| C2 (续写) | 93.84% |
-| C3 (改写) | 100% |
-| C4 (润色) | 92.89% |
+| V11c 验证准确率 | 98.75% |
+| V11c 三集平均准确率 | 98.56% |
+| V11c 独立评估集 | 98.57% |
 | Token分类 | 96.69% |
 
 ## 编码规范
@@ -201,9 +200,9 @@ model = model.to(device)
 
 ### 推荐操作
 
-1. **阅读现有文档**: 优先查看 `docs/project/FINAL_RESULTS.md` 了解项目成果
+1. **阅读现有文档**: 优先查看 `docs/project/DEFENSE_CURRENT_STATUS.md` 了解最新口径
 2. **数据集操作**: 参考 `datasets/registry.json` 获取数据集列表
-3. **模型使用**: 加载 `models/bert_v2_with_sep` 进行推理
+3. **模型使用**: 加载 `models/bert_v11c_boundary_fix` 进行推理
 4. **添加评估**: 在 `scripts/evaluation/` 下创建新脚本
 
 ### 禁止操作
@@ -214,14 +213,25 @@ model = model.to(device)
 
 ### 关键文件
 
-- `models/bert_v2_with_sep/` - 主分类器 (98.71%准确率)
+- `models/bert_v11c_boundary_fix/` - 主分类器 (三集平均 98.56%)
 - `models/bert_span_detector/` - 边界检测器
-- `datasets/active/core_v1/` - 核心训练数据 (66,001条)
+- `datasets/merged_v2/` - 训练主数据池
 
 ## 变更记录 (Changelog)
 
-### 2026-01-28
+### 2026-02-13
 
+- 推荐模型更新为 `bert_v11c_boundary_fix` (三集平均 98.56%, 独立评估 98.57%)
+- V11c 风险治理路线: 数据清洗 + 弱域增补 + 长文AI边界修复
+- Temperature Scaling: T=0.8165, ECE=0.0034
+
+### 2026-02-12
+
+- 推荐模型更新为 `bert_v10_augmented`，同步最新性能口径
+- 文档入口更新为 `docs/project/DEFENSE_CURRENT_STATUS.md`
+- 调整关键文件索引与架构示意
+
+### 2026-01-28
 - 初始化项目架构文档 (CLAUDE.md)
 - 创建模块结构图和索引
 - 添加 `config/README.md` 配置说明文档
@@ -230,4 +240,4 @@ model = model.to(device)
 
 ---
 
-*文档生成时间: 2026-01-28T12:42:53+0800*
+*文档更新时间: 2026-02-13*

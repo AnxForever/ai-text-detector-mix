@@ -62,12 +62,18 @@ python api/api.py
 
 ### 模型依赖
 
-- `models/bert_improved/best_model/` - 分类器模型
+- `models/bert_v11c_boundary_fix/` - 分类器模型 (默认)
 - `models/bert_span_detector/` - 边界检测器模型
 
 ### 环境变量
 
 ```bash
+DETECTOR_CLASSIFIER_MODEL=models/bert_v11c_boundary_fix
+DETECTOR_SPAN_MODEL=models/bert_span_detector
+DETECTOR_MAX_LENGTH=256
+DETECTOR_TEMPERATURE=0.8165
+DETECTOR_DECISION_THRESHOLD=0.8
+DETECTOR_INCLUDE_RISK_OBSERVABILITY=0   # 1 to include risk fields in /api/detect response
 OPENAI_API_KEY=sk-xxx           # OpenAI兼容接口密钥
 OPENAI_BASE_URL=https://...     # 代理API地址
 ```
@@ -90,6 +96,10 @@ class DetectionResponse(BaseModel):
     boundary: int | None
     sentences: list[SentenceResult]
     processingTime: int
+    modelVersion: str | None     # 模型版本标识
+    decisionThreshold: float | None
+    riskFlags: list[str] | None  # 风险提示 (short_text/template_like 等)
+    domainHint: str | None       # 粗粒度文本域提示
 ```
 
 ### HybridTextDetector
@@ -113,7 +123,7 @@ python api/tests/test_v0_api.py
 ## 常见问题 (FAQ)
 
 **Q: 模型加载失败?**
-A: 确保 `models/bert_improved/best_model/` 和 `models/bert_span_detector/` 目录存在且包含完整模型文件。
+A: 确保 `models/bert_v11c_boundary_fix/` 和 `models/bert_span_detector/` 目录存在且包含完整模型文件。
 
 **Q: CUDA 不可用?**
 A: 系统会自动回退到 CPU 模式，性能会下降但功能正常。
@@ -133,9 +143,18 @@ api/
 
 ## 变更记录 (Changelog)
 
+### 2026-02-13
+- 分类器默认路径更新为 `models/bert_v11c_boundary_fix`
+- Temperature 更新为 0.8165
+
+### 2026-02-12
+- 分类器默认路径更新为 `models/bert_v10_augmented`
+- 补充检测模型相关环境变量说明
+- 检测响应新增 `modelVersion/decisionThreshold/riskFlags/domainHint`
+
 ### 2026-01-28
 - 初始化模块文档
 
 ---
 
-*文档生成时间: 2026-01-28T12:42:53+0800*
+*文档更新时间: 2026-02-13*

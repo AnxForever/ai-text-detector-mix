@@ -1,5 +1,8 @@
 # 中文AI文本检测系统 - 最终成果报告
 
+> ⚠️ 本文档主要记录基线阶段（`bert_v2_with_sep`）结果。  
+> 最新答辩口径请查看 `docs/project/DEFENSE_CURRENT_STATUS.md`。
+
 ## 🎯 项目概述
 
 构建了一个针对中文混合文本（人类+AI）的检测系统，实现了从粗粒度分类到细粒度边界定位的完整解决方案。
@@ -254,8 +257,8 @@ cat evaluation_results/final_report.txt
 
 ## 📞 联系方式
 
-- 模型位置: `models/bert_v2_with_sep/`, `models/bert_span_detector/`
-- 数据位置: `datasets/archive/combined_v2/`, `datasets/mixed/hybrid/`
+- 模型位置: `models/bert_v11c_boundary_fix/`, `models/bert_span_detector/`
+- 数据位置: `datasets/merged_v2/`, `datasets/mixed/hybrid/`
 - 演示脚本: `scripts/demo/visualize_detection.py`
 - 评估报告: `evaluation_results/final_report.txt`
 
@@ -285,4 +288,4 @@ cat evaluation_results/final_report.txt
 
 ---
 
-*最后更新: 2026-01-26*
+*最后更新: 2026-02-12（已标记为基线阶段文档）*
