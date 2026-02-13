@@ -126,6 +126,14 @@ async def startup_event():
     global detector
     detector = HybridTextDetector()
 
+
+@app.get("/api/health")
+async def health_check():
+    return {
+        "status": "ok",
+        "detectorReady": detector is not None,
+    }
+
 class DetectRequest(BaseModel):
     text: str
 
