@@ -5,7 +5,7 @@ import time
 import requests
 import torch
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from transformers import BertForSequenceClassification, BertForTokenClassification, BertTokenizer
@@ -160,6 +160,18 @@ detector = None
 async def startup_event():
     global detector
     detector = HybridTextDetector()
+
+
+@app.get("/api/health")
+async def health_check():
+    """Health endpoint for frontend-backend connectivity checks."""
+    return {
+        "status": "ok",
+        "detectorReady": detector is not None,
+        "modelVersion": MODEL_VERSION,
+        "decisionThreshold": DECISION_THRESHOLD,
+        "maxLength": CLASSIFIER_MAX_LENGTH,
+    }
 
 class DetectRequest(BaseModel):
     text: str
@@ -372,12 +384,32 @@ class ChatRequest(BaseModel):
     temperature: float = 0.7
     max_tokens: int = 1000
 
+
+def resolve_api_key(authorization_header: str | None) -> str | None:
+    """Resolve provider key from env first, then optional Authorization header."""
+    env_key = os.getenv("OPENAI_API_KEY")
+    if env_key:
+        return env_key
+
+    if not authorization_header:
+        return None
+
+    auth = authorization_header.strip()
+    if auth.lower().startswith("bearer "):
+        token = auth[7:].strip()
+        return token or None
+    return auth or None
+
+
 @app.post("/v1/chat/completions")
-async def chat_completions(request: ChatRequest):
+async def chat_completions(
+    request: ChatRequest,
+    authorization: str | None = Header(default=None),
+):
     """OpenAI兼容的聊天接口，用于AI续写和润色"""
 
     # 从环境变量读取API密钥
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = resolve_api_key(authorization)
     api_base = os.getenv("OPENAI_BASE_URL", "https://api.hotaruapi.top/v1")
     model_name = request.model or DEFAULT_CHAT_MODEL
 
