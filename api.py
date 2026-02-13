@@ -1,11 +1,16 @@
-import torch
-from transformers import BertTokenizer, BertForSequenceClassification, BertForTokenClassification
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
 import re
 import time
+import os
+
+import requests
+import torch
+import uvicorn
+from fastapi import FastAPI, Header, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from transformers import BertForSequenceClassification, BertForTokenClassification, BertTokenizer
+
+DEFAULT_CHAT_MODEL = os.getenv("OPENAI_CHAT_MODEL", "deepseek-ai/deepseek-v3.1")
 
 # --- HybridTextDetector Class (Adapted for API) ---
 class HybridTextDetector:
@@ -273,6 +278,70 @@ async def detect_text(request: DetectRequest):
         sentences=sentence_results,
         processingTime=processing_time
     )
+
+
+class ChatRequest(BaseModel):
+    model: str | None = None
+    messages: list[dict]
+    temperature: float = 0.7
+    max_tokens: int = 1000
+
+
+def resolve_api_key(authorization_header: str | None) -> str | None:
+    """Resolve provider key from env first, then optional Authorization header."""
+    env_key = os.getenv("OPENAI_API_KEY")
+    if env_key:
+        return env_key
+
+    if not authorization_header:
+        return None
+
+    auth = authorization_header.strip()
+    if auth.lower().startswith("bearer "):
+        token = auth[7:].strip()
+        return token or None
+    return auth or None
+
+
+@app.post("/v1/chat/completions")
+async def chat_completions(
+    request: ChatRequest,
+    authorization: str | None = Header(default=None),
+):
+    """OpenAI-compatible chat endpoint for text polish/continuation."""
+    api_key = resolve_api_key(authorization)
+    api_base = os.getenv("OPENAI_BASE_URL", "https://api.hotaruapi.top/v1")
+    model_name = request.model or DEFAULT_CHAT_MODEL
+
+    if not api_key:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY is not set")
+
+    try:
+        response = requests.post(
+            f"{api_base}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": model_name,
+                "messages": request.messages,
+                "temperature": request.temperature,
+                "max_tokens": request.max_tokens,
+            },
+            timeout=60,
+        )
+
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+
+        return response.json()
+    except requests.exceptions.Timeout:
+        raise HTTPException(status_code=504, detail="API request timeout")
+    except requests.exceptions.JSONDecodeError:
+        raise HTTPException(status_code=500, detail=f"Invalid API response: {response.text[:200]}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"API request failed: {str(e)}")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
