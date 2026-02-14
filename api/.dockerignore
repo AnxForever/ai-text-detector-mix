@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+tests/
+.git/
+.gitignore
+Dockerfile
+*.md

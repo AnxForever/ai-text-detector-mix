@@ -1,0 +1,55 @@
+services:
+  backend:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    volumes:
+      - ./models:/app/models:ro
+      - ./api/api.py:/app/api.py:ro
+    env_file:
+      - .env.deploy
+    environment:
+      - DETECTOR_CLASSIFIER_MODEL=models/bert_v11c_boundary_fix
+      - DETECTOR_SPAN_MODEL=models/bert_span_detector
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped
+    # Uncomment for GPU support (requires nvidia-container-toolkit):
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        BACKEND_API_URL: http://backend:8000
+    env_file:
+      - .env.deploy
+    environment:
+      - BACKEND_API_URL=http://backend:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      # - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      # - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - frontend
+      - backend
+    restart: unless-stopped

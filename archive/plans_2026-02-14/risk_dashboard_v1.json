@@ -1,0 +1,241 @@
+{
+  "generated_at": "2026-02-12 19:23:17",
+  "train_path": "C:\\datacollection\\datasets\\merged_v2\\train_v10.csv",
+  "thresholds": {
+    "weak_domain_threshold": 95.0,
+    "exact_duplicate_threshold_percent": 1.0,
+    "near_duplicate_threshold_percent": 3.0
+  },
+  "label_stats": {
+    "rows": 62980,
+    "human_count": 30165,
+    "ai_count": 32815,
+    "ai_ratio_percent": 52.104,
+    "human_ratio_percent": 47.896
+  },
+  "source_stats": {
+    "unique_sources": 128,
+    "unknown_count": 3783,
+    "unknown_ratio_percent": 6.007,
+    "top_sources": {
+      "hc3_human": 14230,
+      "hc3_chatgpt": 12805,
+      "thucnews": 6938,
+      "unknown": 3783,
+      "Senior_qwen": 3261,
+      "Senior_deepseek": 3229,
+      "external_m4_qazh": 2680,
+      "Wikipedia_CN": 1864,
+      "parallel_gpt-4.1-mini": 1719,
+      "parallel_deepseek-v3.2": 928,
+      "parallel_Kimi-K2": 893,
+      "parallel_gemini-2.5-flash": 854,
+      "parallel_claude-haiku-4-5-20251001": 825,
+      "parallel_cursor2-gpt-5": 718,
+      "Toutiao_news_tech": 708,
+      "auto_custom": 642,
+      "auto_deepseek": 631,
+      "parallel_deepseek-v3.2-chat": 562,
+      "parallel_claude-sonnet-4-5": 538,
+      "parallel_qwen-max-latest": 528
+    }
+  },
+  "length_bucket_stats": [
+    {
+      "bucket": "0-64",
+      "count": 3295,
+      "human_count": 2986,
+      "ai_count": 309,
+      "ai_ratio_percent": 9.378,
+      "risk_level": "high_bias"
+    },
+    {
+      "bucket": "64-128",
+      "count": 8751,
+      "human_count": 4622,
+      "ai_count": 4129,
+      "ai_ratio_percent": 47.183,
+      "risk_level": "balanced"
+    },
+    {
+      "bucket": "128-256",
+      "count": 16096,
+      "human_count": 10762,
+      "ai_count": 5334,
+      "ai_ratio_percent": 33.139,
+      "risk_level": "balanced"
+    },
+    {
+      "bucket": "256-512",
+      "count": 10287,
+      "human_count": 4477,
+      "ai_count": 5810,
+      "ai_ratio_percent": 56.479,
+      "risk_level": "balanced"
+    },
+    {
+      "bucket": "512-1024",
+      "count": 8836,
+      "human_count": 4323,
+      "ai_count": 4513,
+      "ai_ratio_percent": 51.075,
+      "risk_level": "balanced"
+    },
+    {
+      "bucket": "1024-2048",
+      "count": 10681,
+      "human_count": 2532,
+      "ai_count": 8149,
+      "ai_ratio_percent": 76.294,
+      "risk_level": "medium_bias"
+    },
+    {
+      "bucket": "2048+",
+      "count": 5034,
+      "human_count": 463,
+      "ai_count": 4571,
+      "ai_ratio_percent": 90.803,
+      "risk_level": "high_bias"
+    }
+  ],
+  "duplicate_stats": {
+    "exact_duplicate_rows": 0,
+    "exact_duplicate_ratio_percent": 0.0,
+    "normalized_duplicate_rows": 62,
+    "normalized_duplicate_ratio_percent": 0.098,
+    "prefix200_duplicate_rows": 17,
+    "prefix200_duplicate_ratio_percent": 0.027,
+    "normalized_prefix200_duplicate_rows": 72,
+    "normalized_prefix200_duplicate_ratio_percent": 0.114,
+    "top_normalized_prefix_clusters": [
+      {
+        "cluster_size": 33,
+        "sample_text_prefix": "This content may violate our content policy. If you believe this to be in error, please submit your feedback — your input will aid our research in this area.如果你",
+        "cluster_key_prefix": "thiscontentmayviolateourcontentpolicyifyoubelievethistobeinerrorpleasesubmityour"
+      },
+      {
+        "cluster_size": 4,
+        "sample_text_prefix": "chat.openai.comChecking if the site connection is securechat.openai.com needs to review the security of your connection before proceeding.Did you know the first",
+        "cluster_key_prefix": "chatopenaicomcheckingifthesiteconnectionissecurechatopenaicomneedstoreviewthesec"
+      },
+      {
+        "cluster_size": 3,
+        "sample_text_prefix": "1. **分析需求：** *   **角色：** 中文写作助手。 *   **输出：** 仅输出最终正文（无分析、无要求列表、无Markdown标题）。 *   **字数：** 约1200–1800字。 *   **主题：** 多域文本分类泛化。 *   **任务：** 分类。 *   **风格：** 课程论文/实验报",
+        "cluster_key_prefix": "1分析需求角色中文写作助手输出仅输出最终正文无分析无要求列表无markdown标题字数约12001800字主题多域文本分类泛化任务分类风格课程论文实验报告方法结"
+      },
+      {
+        "cluster_size": 3,
+        "sample_text_prefix": "我的思路是沿着加隆老师的路线往下走的：妻子遇见你之前有过迷惘（何况成年人有选择性伴侣的自由），而遇见你之后她得以重生，相夫教子。你觉得你那些朋友告诉你她的过去史，是为了让你看清这个“坏女人”，为你好？或许他们是在嫉妒你，因为你有让一个曾经迷惘的女人重婚新生的魅力，这是他们想都不敢想的。所以他们想破坏“美好”啊老大，物以",
+        "cluster_key_prefix": "我的思路是沿着加隆老师的路线往下走的妻子遇见你之前有过迷惘何况成年人有选择性伴侣的自由而遇见你之后她得以重生相夫教子你觉得你那些朋友告诉你她的过去史是为了让你看"
+      },
+      {
+        "cluster_size": 3,
+        "sample_text_prefix": "I appreciate the detailed request, but I need to let you know that I'm Kiro, an AWS assistant built to help with cloud infrastructure, development tasks, and sy",
+        "cluster_key_prefix": "iappreciatethedetailedrequestbutineedtoletyouknowthatimkiroanawsassistantbuiltto"
+      },
+      {
+        "cluster_size": 2,
+        "sample_text_prefix": "您好：\r     由于地震造成网络通信线路上的问题，将原定于5月15日启动的新区计划将改日开放，具体时间请关注官网公告！给您造成了不便请您谅解！封印有您更精彩！\r     感谢您的支持！",
+        "cluster_key_prefix": "您好由于地震造成网络通信线路上的问题将原定于5月15日启动的新区计划将改日开放具体时间请关注官网公告给您造成了不便请您谅解封印有您更精彩感谢您的支持"
+      },
+      {
+        "cluster_size": 2,
+        "sample_text_prefix": "所在城市若有招商银行，也可以了解下招行发售的理财产品，您可以进入招行主页，点击“理财产品”-“个人理财产品”页面查看，也可通过“搜索”分类您需要的理财产品。温馨提示：购买之前请详细阅读产品说明书。",
+        "cluster_key_prefix": "所在城市若有招商银行也可以了解下招行发售的理财产品您可以进入招行主页点击理财产品个人理财产品页面查看也可通过搜索分类您需要的理财产品温馨提示购买之前请详细阅读产"
+      },
+      {
+        "cluster_size": 2,
+        "sample_text_prefix": "我行规定:贷款人年龄需年满18岁，且年龄加贷款年限不得超过70岁。【注】未成年人如需申请贷款，可尝试由父母(或一方)作为共同贷款申请人；具体能否办理，建议您联系网点贷款部门咨询!",
+        "cluster_key_prefix": "我行规定贷款人年龄需年满18岁且年龄加贷款年限不得超过70岁注未成年人如需申请贷款可尝试由父母或一方作为共同贷款申请人具体能否办理建议您联系网点贷款部门咨询"
+      },
+      {
+        "cluster_size": 2,
+        "sample_text_prefix": "我猜，你作为成年人，是知道自己需要怎么办的，只是不那么愿意承担选择后的代价，也不想独自一人面对未知的未来。 你可以尝试寻求一些力量来支持自己的决定。祝愿你拥有更多的勇气，面对当下的困境和不安的未来。",
+        "cluster_key_prefix": "我猜你作为成年人是知道自己需要怎么办的只是不那么愿意承担选择后的代价也不想独自一人面对未知的未来你可以尝试寻求一些力量来支持自己的决定祝愿你拥有更多的勇气面对当"
+      },
+      {
+        "cluster_size": 2,
+        "sample_text_prefix": "我爸很缺愛 很老实 没有自我 我妈很强势 常常训得我爸发怵 但骨子里也是个缺爱的人 极致完美主义 始终活在别人眼里  我正在尝试改变这个家",
+        "cluster_key_prefix": "我爸很缺愛很老实没有自我我妈很强势常常训得我爸发怵但骨子里也是个缺爱的人极致完美主义始终活在别人眼里我正在尝试改变这个家"
+      }
+    ]
+  },
+  "template_noise": {
+    "hard_pattern_counts": {
+      "instruction_leak_cn": 293,
+      "assistant_meta_cn": 219,
+      "assistant_meta_en": 0,
+      "roleplay_prompt": 240,
+      "template_header": 100
+    },
+    "soft_pattern_counts": {
+      "markdown_table": 2465,
+      "markdown_list": 7358,
+      "markdown_code": 1014,
+      "heading_style": 8373,
+      "excessive_punctuation": 337,
+      "overlong_text": 7
+    },
+    "hard_match_rows": 750,
+    "soft_match_rows": 12158,
+    "hard_match_ratio_percent": 1.191,
+    "soft_match_ratio_percent": 19.305,
+    "ai_soft_pattern_counts": {
+      "markdown_table": 2451,
+      "markdown_list": 7281,
+      "markdown_code": 1010,
+      "heading_style": 8373,
+      "excessive_punctuation": 28,
+      "overlong_text": 0
+    },
+    "human_soft_pattern_counts": {
+      "markdown_table": 14,
+      "markdown_list": 77,
+      "markdown_code": 4,
+      "heading_style": 0,
+      "excessive_punctuation": 309,
+      "overlong_text": 7
+    }
+  },
+  "eval_overlap_checks": [
+    {
+      "dataset": "core_v1_test_clean",
+      "rows": 545,
+      "exact_overlap": 0,
+      "prefix200_overlap": 0,
+      "normalized_prefix200_overlap": 0
+    },
+    {
+      "dataset": "independent_data",
+      "rows": 910,
+      "exact_overlap": 0,
+      "prefix200_overlap": 0,
+      "normalized_prefix200_overlap": 1
+    },
+    {
+      "dataset": "merged_v2_val_clean",
+      "rows": 1144,
+      "exact_overlap": 0,
+      "prefix200_overlap": 0,
+      "normalized_prefix200_overlap": 1
+    }
+  ],
+  "weak_domains": [
+    {
+      "source": "real_ai_llama-3.1-405b-instruct",
+      "accuracy": 88.89,
+      "count": 9
+    },
+    {
+      "source": "formal_collected",
+      "accuracy": 92.5,
+      "count": 200
+    }
+  ],
+  "risk_flags": [
+    "unknown_source_ratio_high",
+    "length_bucket_bias_high",
+    "template_leakage_present",
+    "weak_domain_present"
+  ]
+}

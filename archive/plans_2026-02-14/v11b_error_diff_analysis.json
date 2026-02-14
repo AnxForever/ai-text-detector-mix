@@ -1,0 +1,429 @@
+{
+  "core_v1_test_clean": {
+    "v10_accuracy": 98.35,
+    "v11b_accuracy": 97.98,
+    "new_errors": 3,
+    "fixed_errors": 1,
+    "both_wrong": 8,
+    "net_change": -2,
+    "new_error_details": [
+      {
+        "index": 15,
+        "length": 2484,
+        "bin": "512+",
+        "label": "Human",
+        "v11b_pred": "AI",
+        "v11b_conf": 0.8817,
+        "source": "thucnews",
+        "text_preview": "当新的一周如期而至，勒布朗·詹姆斯与迈阿密热火又将迎来一场“重头戏”。当然，在詹姆斯看来，这没什么新鲜的，因为“重头戏”早已成为他本赛季的家常便饭。比如在波士顿"
+      },
+      {
+        "index": 20,
+        "length": 2151,
+        "bin": "512+",
+        "label": "Human",
+        "v11b_pred": "AI",
+        "v11b_conf": 0.9747,
+        "source": "thucnews",
+        "text_preview": "圣诞节快到了，许多人都问我，印度人过不过圣诞节呢，印度的圣诞节热闹不？我回答他们，印度人不喜欢过圣诞节，那里的圣诞节也不热门。这是为什么呢？第一个原因是印度居民"
+      },
+      {
+        "index": 378,
+        "length": 922,
+        "bin": "512+",
+        "label": "Human",
+        "v11b_pred": "AI",
+        "v11b_conf": 0.8242,
+        "source": "thucnews",
+        "text_preview": "新华网台北10月9日电（记者 赵博 陈斌华）在岛内社会的强烈压力下，民进党廉政委员会9日傍晚终于公布了陈水扁涉嫌海外洗钱案的调查报告和裁决结果。报告认为，陈水扁"
+      }
+    ],
+    "fixed_error_details": [
+      {
+        "index": 498,
+        "length": 1444,
+        "bin": "512+",
+        "label": "Human",
+        "v11b_pred": "Human",
+        "v11b_conf": 0.9609,
+        "source": "thucnews",
+        "text_preview": "11月21日上午，由北京市汉语国际推广中心主办，北京汉语网承办的“2010北京高校外国留学生汉语辩论赛”决赛在北京语言大学逸夫报告厅成功落下帷幕。北京市汉语国际"
+      }
+    ],
+    "length_bins": [
+      {
+        "bin": "0-64",
+        "count": 15,
+        "v10_acc": 100.0,
+        "v11b_acc": 100.0,
+        "delta": 0.0
+      },
+      {
+        "bin": "64-128",
+        "count": 104,
+        "v10_acc": 99.04,
+        "v11b_acc": 99.04,
+        "delta": 0.0
+      },
+      {
+        "bin": "128-256",
+        "count": 96,
+        "v10_acc": 100.0,
+        "v11b_acc": 100.0,
+        "delta": 0.0
+      },
+      {
+        "bin": "256-512",
+        "count": 91,
+        "v10_acc": 97.8,
+        "v11b_acc": 97.8,
+        "delta": 0.0
+      },
+      {
+        "bin": "512+",
+        "count": 239,
+        "v10_acc": 97.49,
+        "v11b_acc": 96.65,
+        "delta": -0.84
+      }
+    ]
+  },
+  "independent_data": {
+    "v10_accuracy": 97.69,
+    "v11b_accuracy": 98.46,
+    "new_errors": 3,
+    "fixed_errors": 10,
+    "both_wrong": 11,
+    "net_change": 7,
+    "new_error_details": [
+      {
+        "index": 174,
+        "length": 162,
+        "bin": "128-256",
+        "label": "Human",
+        "v11b_pred": "AI",
+        "v11b_conf": 0.7624,
+        "source": "学术摘要-流行病学",
+        "text_preview": "本研究旨在分析青少年近视发生的相关危险因素。采用多阶段分层整群抽样方法，对北京市5所中学2000名学生进行问卷调查和视力检查。Logistic回归分析结果显示，"
+      },
+      {
+        "index": 205,
+        "length": 110,
+        "bin": "64-128",
+        "label": "Human",
+        "v11b_pred": "AI",
+        "v11b_conf": 0.9403,
+        "source": "formal_collected",
+        "text_preview": "几十块钱的保险费似乎非常划算，但却有很多条款限制。例如，支付宝推出的保险，要求参保的手机必须是一年以内的新机。苹果手机不支持换屏，出现碎屏后，需要联系保险公司，"
+      },
+      {
+        "index": 322,
+        "length": 103,
+        "bin": "64-128",
+        "label": "Human",
+        "v11b_pred": "AI",
+        "v11b_conf": 0.9314,
+        "source": "formal_collected",
+        "text_preview": "23日上午，由最高人民法院主办的中英非法证据排除问题研讨会在江西景德镇召开。最高人民法院副院长李少平出席研讨会并讲话。李少平指出，现代刑事诉讼中，证据问题是诉讼"
+      }
+    ],
+    "fixed_error_details": [
+      {
+        "index": 137,
+        "length": 168,
+        "bin": "128-256",
+        "label": "Human",
+        "v11b_pred": "Human",
+        "v11b_conf": 0.9723,
+        "source": "external_m4_qazh",
+        "text_preview": "你可以看每个股票的页面。 \r 一般来说，股票页面左上角有一行MA（日线）具体数值的说明。不同MA数值的颜色就代表了所对应的日线颜色。 \r 有用MA（5、10、2"
+      },
+      {
+        "index": 198,
+        "length": 107,
+        "bin": "64-128",
+        "label": "Human",
+        "v11b_pred": "Human",
+        "v11b_conf": 0.9734,
+        "source": "formal_collected",
+        "text_preview": "昨日上午，“云暖鲁甸”爱心款全部发放完毕。村民们仔细计划着如何用这些钱——寒冬里，为了守孝和照顾家人，更多的青壮劳力不得不守在家中，无法到远方挣钱养家，而政府发"
+      },
+      {
+        "index": 265,
+        "length": 99,
+        "bin": "64-128",
+        "label": "Human",
+        "v11b_pred": "Human",
+        "v11b_conf": 0.9647,
+        "source": "formal_collected",
+        "text_preview": "拖延似乎是大多数人觉得自己有商业计划，但是并没有执行的最好的理由。有了互联网和一些初始的帮助，你可以测试和验证你的商业计划——只需要不到48小时时间。比起你未来"
+      },
+      {
+        "index": 272,
+        "length": 115,
+        "bin": "64-128",
+        "label": "Human",
+        "v11b_pred": "Human",
+        "v11b_conf": 0.954,
+        "source": "formal_collected",
+        "text_preview": "4日下午，普洱市思茅区六顺镇一对夫妇在咖啡地里遭野象（亚洲象）攻击，丈夫不幸当场死亡，妻子受伤后滚下土坎逃过一劫。目前伤者正在接受治疗，当地党委政府已介入此事，"
+      },
+      {
+        "index": 325,
+        "length": 101,
+        "bin": "64-128",
+        "label": "Human",
+        "v11b_pred": "Human",
+        "v11b_conf": 0.9479,
+        "source": "formal_collected",
+        "text_preview": "因筹不到钱买狗粮，深圳福田爱护动物协会面临倒闭。若无人接手，该组织收养的250多条流浪狗，将被集体人道毁灭。多年来，城市管理者不停送进狗只，却鲜见资金帮扶，犬只"
+      },
+      {
+        "index": 348,
+        "length": 100,
+        "bin": "64-128",
+        "label": "Human",
+        "v11b_pred": "Human",
+        "v11b_conf": 0.9688,
+        "source": "formal_collected",
+        "text_preview": "核电重启进入关键节点，任何风吹草动都能引起市场的躁动。一则中科院讨论核电重启的传闻，引得核电板块连续上涨三天。然而，知情人士告诉中国证券报记者，确切消息是，中国"
+      },
+      {
+        "index": 357,
+        "length": 95,
+        "bin": "64-128",
+        "label": "Human",
+        "v11b_pred": "Human",
+        "v11b_conf": 0.955,
+        "source": "formal_collected",
+        "text_preview": "上海拿出3000张车牌，专门提供给购买特斯拉ModelS及其他进口纯电动车的消费者。目前，每张沪牌的拍卖价格已超过人民币8万元。这意味着购买了ModelS的消费"
+      },
+      {
+        "index": 367,
+        "length": 108,
+        "bin": "64-128",
+        "label": "Human",
+        "v11b_pred": "Human",
+        "v11b_conf": 0.9727,
+        "source": "formal_collected",
+        "text_preview": "索尼今天宣布，该公司已与一组投资者达成协议，以11亿美元出售位于纽约的美国总部大楼，并同意回租作为其未来3年美国总部所在地。索尼预计此次出售交易的净现金收益为7"
+      },
+      {
+        "index": 761,
+        "length": 429,
+        "bin": "256-512",
+        "label": "AI",
+        "v11b_pred": "AI",
+        "v11b_conf": 0.9774,
+        "source": "real_ai_llama-3.1-405b-instruct",
+        "text_preview": "自动化部署使用说明  适用人群：具备基本计算机知识和操作技能的用户。不适用人群：完全没有计算机基础知识的用户。  FAQ：  Q：什么是自动化部署？ A：自动化"
+      },
+      {
+        "index": 882,
+        "length": 243,
+        "bin": "128-256",
+        "label": "AI",
+        "v11b_pred": "AI",
+        "v11b_conf": 0.9709,
+        "source": "real_ai_m4_chatgpt",
+        "text_preview": "2015年4月27日格力电器推出的分红方案可以说是创造了中国股市历史上的分红记录。这个方案可以称之为“史上最牛分红方案”，因为它包括了10转10的送股和10元的"
+      }
+    ],
+    "length_bins": [
+      {
+        "bin": "0-64",
+        "count": 384,
+        "v10_acc": 100.0,
+        "v11b_acc": 100.0,
+        "delta": 0.0
+      },
+      {
+        "bin": "64-128",
+        "count": 208,
+        "v10_acc": 92.79,
+        "v11b_acc": 95.19,
+        "delta": 2.4
+      },
+      {
+        "bin": "128-256",
+        "count": 88,
+        "v10_acc": 97.73,
+        "v11b_acc": 98.86,
+        "delta": 1.14
+      },
+      {
+        "bin": "256-512",
+        "count": 103,
+        "v10_acc": 96.12,
+        "v11b_acc": 97.09,
+        "delta": 0.97
+      },
+      {
+        "bin": "512+",
+        "count": 127,
+        "v10_acc": 100.0,
+        "v11b_acc": 100.0,
+        "delta": 0.0
+      }
+    ]
+  },
+  "merged_v2_val_clean": {
+    "v10_accuracy": 99.04,
+    "v11b_accuracy": 99.3,
+    "new_errors": 4,
+    "fixed_errors": 7,
+    "both_wrong": 4,
+    "net_change": 3,
+    "new_error_details": [
+      {
+        "index": 259,
+        "length": 822,
+        "bin": "512+",
+        "label": "Human",
+        "v11b_pred": "AI",
+        "v11b_conf": 0.9546,
+        "source": "thucnews",
+        "text_preview": "本报讯 英国媒体1日披露，英国MI6主管约翰·索沃斯的女儿科琳娜近日在自己的“脸谱”(Facebook)网页上上传了一张自己站在圣诞树旁、手持镀金AK47步枪的"
+      },
+      {
+        "index": 397,
+        "length": 272,
+        "bin": "256-512",
+        "label": "Human",
+        "v11b_pred": "AI",
+        "v11b_conf": 0.6029,
+        "source": "hc3_human",
+        "text_preview": "你好，非常佩服你的决心和你强烈的想要解决问题的动机。自杀需要很大的勇气和决心，与之对应可以看出你有多大的失望和挫败。从面对问题来说，你是勇敢的，你不让自己逃避，"
+      },
+      {
+        "index": 665,
+        "length": 100,
+        "bin": "64-128",
+        "label": "Human",
+        "v11b_pred": "AI",
+        "v11b_conf": 0.9731,
+        "source": "hc3_human",
+        "text_preview": "系统分区(System Partion)是Windows操作系统里常用的术语，主要指的是用于启动Windows的分区，通常该分区的根目录下，包含操作系统的启动文"
+      },
+      {
+        "index": 926,
+        "length": 162,
+        "bin": "128-256",
+        "label": "Human",
+        "v11b_pred": "AI",
+        "v11b_conf": 0.7624,
+        "source": "学术摘要-流行病学",
+        "text_preview": "本研究旨在分析青少年近视发生的相关危险因素。采用多阶段分层整群抽样方法，对北京市5所中学2000名学生进行问卷调查和视力检查。Logistic回归分析结果显示，"
+      }
+    ],
+    "fixed_error_details": [
+      {
+        "index": 175,
+        "length": 420,
+        "bin": "256-512",
+        "label": "Human",
+        "v11b_pred": "Human",
+        "v11b_conf": 0.9508,
+        "source": "thucnews",
+        "text_preview": "中新网北京3月17日电 (记者 余湛奕)朝鲜内阁总理金英日17日上午抵达北京，开始对中国进行为期5天的正式友好访问并出席中朝友好年开幕式。据悉，金英日抵京后将随"
+      },
+      {
+        "index": 329,
+        "length": 526,
+        "bin": "512+",
+        "label": "AI",
+        "v11b_pred": "AI",
+        "v11b_conf": 0.7287,
+        "source": "nan",
+        "text_preview": "新华网北京9月12日电（记者姚润丰）针对严峻的台风防御形势，国家防汛抗旱总指挥部两次发出通知，要求相关地区高度重视防御工作，密切关注台风动向，加强预报和预警，及"
+      },
+      {
+        "index": 348,
+        "length": 1854,
+        "bin": "512+",
+        "label": "AI",
+        "v11b_pred": "AI",
+        "v11b_conf": 0.9774,
+        "source": "parallel_claude-sonnet-4-5",
+        "text_preview": "智能家居里的秘密  清晨六点，李婉芝像往常一样被智能音箱的闹钟唤醒。她睁开眼睛，第一件事就是用手机关闭卧室里的监控摄像头。这个习惯已经保持了三年，自从她发现那些"
+      },
+      {
+        "index": 433,
+        "length": 327,
+        "bin": "256-512",
+        "label": "Human",
+        "v11b_pred": "Human",
+        "v11b_conf": 0.9697,
+        "source": "thucnews",
+        "text_preview": "EA近日更新官方网站，发布了赛车新作《极品飞车13：变速》（Need for Speed: Shift）的首段漂移视频。这部视频由世界冠军漂移车手Vaughn "
+      },
+      {
+        "index": 713,
+        "length": 508,
+        "bin": "256-512",
+        "label": "Human",
+        "v11b_pred": "Human",
+        "v11b_conf": 0.6747,
+        "source": "hc3_human",
+        "text_preview": "心理咨询是需要签协议的， 心理咨询协议书——为了更好地开展心理咨询工作，建立良好的咨访关系，保护双方的权利和福祉，来访者与心理咨询师均需遵守如下条款： 第五部分"
+      },
+      {
+        "index": 719,
+        "length": 92,
+        "bin": "64-128",
+        "label": "Human",
+        "v11b_pred": "Human",
+        "v11b_conf": 0.9262,
+        "source": "hc3_human",
+        "text_preview": "五式战斗机（Ki-100）是二战时期日本陆军的战斗机机种之一，由川崎航空机（现川崎重工业）负责开发及制造，这款战斗机继承了三式战斗机的坚固机身构造，主要用于太平"
+      },
+      {
+        "index": 1119,
+        "length": 168,
+        "bin": "128-256",
+        "label": "Human",
+        "v11b_pred": "Human",
+        "v11b_conf": 0.9723,
+        "source": "external_m4_qazh",
+        "text_preview": "你可以看每个股票的页面。 \r 一般来说，股票页面左上角有一行MA（日线）具体数值的说明。不同MA数值的颜色就代表了所对应的日线颜色。 \r 有用MA（5、10、2"
+      }
+    ],
+    "length_bins": [
+      {
+        "bin": "0-64",
+        "count": 190,
+        "v10_acc": 100.0,
+        "v11b_acc": 100.0,
+        "delta": 0.0
+      },
+      {
+        "bin": "64-128",
+        "count": 128,
+        "v10_acc": 97.66,
+        "v11b_acc": 97.66,
+        "delta": 0.0
+      },
+      {
+        "bin": "128-256",
+        "count": 219,
+        "v10_acc": 99.54,
+        "v11b_acc": 99.54,
+        "delta": 0.0
+      },
+      {
+        "bin": "256-512",
+        "count": 168,
+        "v10_acc": 97.02,
+        "v11b_acc": 98.21,
+        "delta": 1.19
+      },
+      {
+        "bin": "512+",
+        "count": 439,
+        "v10_acc": 99.54,
+        "v11b_acc": 99.77,
+        "delta": 0.23
+      }
+    ]
+  }
+}

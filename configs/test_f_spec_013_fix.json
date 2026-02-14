@@ -1,0 +1,37 @@
+{
+  "run_name": "test_f_spec_013_fix",
+  "output_dir": "datasets/generated/scenario_fill/test_fix",
+  "template_path": "docs/plans/ai_generation_templates_v2_mapped_2026-01-28.yaml",
+  "constraints_version": "v2",
+  "proxy_pool": [
+    {
+      "proxy_name": "local_proxy",
+      "proxy_env_prefix": "LOCAL_PROXY",
+      "proxy_base_url": "http://192.168.60.105:8317/v1",
+      "models": ["deepseek-v3.2"],
+      "request_delay": 0.3
+    }
+  ],
+  "decoding_profiles": [
+    {"name": "conservative", "temperature": 0.3, "top_p": 0.9, "max_tokens": 300},
+    {"name": "diverse", "temperature": 0.7, "top_p": 0.95, "max_tokens": 300}
+  ],
+  "request_delay": 0.3,
+  "request_interval": 0.3,
+  "request_timeout": 60,
+  "max_attempts": 2,
+  "concurrency": 3,
+  "chunk_size": 100,
+  "log_every": 1,
+  "clean_forbidden_phrases": true,
+  "tasks": [
+    {
+      "scenario_id": "F",
+      "scenario": "news",
+      "style_plan": "report",
+      "length_bucket": "80-200",
+      "target_count": 10,
+      "priority": "P0"
+    }
+  ]
+}

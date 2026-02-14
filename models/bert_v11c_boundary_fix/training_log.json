@@ -1,0 +1,84 @@
+{
+  "version": "v11c",
+  "strategy": "data_cleaning_plus_weak_domain_plus_long_ai_boundary_fix",
+  "description": "V11b config + 2131 long-AI boundary supplement (restore 256+ bucket to V10 levels)",
+  "base_model": "/mnt/c/datacollection/models/bert_v7_improved",
+  "config": {
+    "base_model": "/mnt/c/datacollection/models/bert_v7_improved",
+    "train_data": "/mnt/c/datacollection/datasets/merged_v2/train_v11c_candidate.csv",
+    "val_data": "/mnt/c/datacollection/datasets/merged_v2/val.csv",
+    "output": "/mnt/c/datacollection/models/bert_v11c_boundary_fix",
+    "batch_size": 8,
+    "max_length": 256,
+    "epochs": 5,
+    "learning_rate": 1e-05,
+    "label_smoothing": 0.05,
+    "length_penalty_weight": 0.1,
+    "accum_steps": 4,
+    "patience": 2,
+    "min_text_length": 10,
+    "max_text_length": 5000
+  },
+  "train_samples": 63113,
+  "val_samples": 7452,
+  "data_changes_vs_v10": {
+    "removed_hard_patterns": 750,
+    "removed_unapproved_unknown": 1767,
+    "removed_length_violations": 7,
+    "added_weak_domain_formal_collected": 300,
+    "added_weak_domain_llama_405b": 300,
+    "added_long_ai_boundary_fix": 2131,
+    "v10_rows": 62980,
+    "v11a_rows": 60456,
+    "v11b_rows": 61056,
+    "v11c_rows": 63187,
+    "net_change_vs_v10": 207
+  },
+  "best_val_acc": 0.98752,
+  "results": [
+    {
+      "epoch": 1,
+      "train_loss": 0.1235,
+      "train_acc": 0.9955,
+      "val_loss": 0.0858,
+      "val_acc": 0.9768,
+      "val_precision": 0.9619,
+      "val_recall": 0.9957,
+      "val_f1": 0.9785,
+      "time_sec": 2146.0
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.11,
+      "train_acc": 0.9981,
+      "val_loss": 0.0621,
+      "val_acc": 0.9875,
+      "val_precision": 0.983,
+      "val_recall": 0.9937,
+      "val_f1": 0.9883,
+      "time_sec": 2484.8
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.108,
+      "train_acc": 0.9991,
+      "val_loss": 0.068,
+      "val_acc": 0.9854,
+      "val_precision": 0.9796,
+      "val_recall": 0.9932,
+      "val_f1": 0.9863,
+      "time_sec": 1811.4
+    },
+    {
+      "epoch": 4,
+      "train_loss": 0.1078,
+      "train_acc": 0.9991,
+      "val_loss": 0.0749,
+      "val_acc": 0.9823,
+      "val_precision": 0.971,
+      "val_recall": 0.9965,
+      "val_f1": 0.9835,
+      "time_sec": 1729.5
+    }
+  ]
+}

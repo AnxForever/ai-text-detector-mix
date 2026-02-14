@@ -1,0 +1,105 @@
+{
+  "generated_at": "2026-02-13",
+  "comparison_type": "four_way_v10_v11a_v11b_v11c",
+  "models": {
+    "bert_v10_augmented": {
+      "train_data": "train_v10.csv (62,980 rows)",
+      "strategy": "V9 + targeted augmentation",
+      "train_samples_after_clean": 62899,
+      "three_set_avg": 98.36,
+      "core_v1_test_clean": 98.35,
+      "independent_data": 97.69,
+      "merged_v2_val_clean": 99.04,
+      "independent_errors": 21,
+      "temperature": 0.8931,
+      "ece_after_calibration": 0.0058
+    },
+    "bert_v11a_clean": {
+      "train_data": "train_v11a_candidate.csv (60,456 rows)",
+      "strategy": "V10 - hard patterns - unapproved unknown",
+      "train_samples_after_clean": 60382,
+      "three_set_avg": 97.75,
+      "core_v1_test_clean": 97.43,
+      "independent_data": 97.03,
+      "merged_v2_val_clean": 98.78,
+      "independent_errors": 27,
+      "temperature": 0.8987,
+      "ece_after_calibration": 0.0078,
+      "gate_decision": "FAIL (-0.61%)"
+    },
+    "bert_v11b_augmented": {
+      "train_data": "train_v11b_candidate.csv (61,056 rows)",
+      "strategy": "V11a + 600 weak-domain supplement",
+      "train_samples_after_clean": 60982,
+      "three_set_avg": 98.58,
+      "core_v1_test_clean": 97.98,
+      "independent_data": 98.46,
+      "merged_v2_val_clean": 99.30,
+      "independent_errors": 14,
+      "temperature": 0.8226,
+      "ece_after_calibration": 0.0031,
+      "gate_decision": "PASS (+0.22%)"
+    },
+    "bert_v11c_boundary_fix": {
+      "train_data": "train_v11c_candidate.csv (63,187 rows)",
+      "strategy": "V11b + 2131 long-AI boundary supplement",
+      "train_samples_after_clean": 63113,
+      "three_set_avg": 98.56,
+      "core_v1_test_clean": 97.98,
+      "independent_data": 98.57,
+      "merged_v2_val_clean": 99.13,
+      "independent_errors": 13,
+      "temperature": 0.8165,
+      "ece_after_calibration": 0.0034,
+      "gate_decision": "PASS (+0.20%)"
+    }
+  },
+  "independent_data_source_comparison": {
+    "formal_collected": {
+      "count": 200,
+      "V10": 96.0,
+      "V11a": 90.0,
+      "V11b": 95.0,
+      "V11c": 96.5
+    },
+    "llama_405b": {
+      "count": 9,
+      "V10": 88.9,
+      "V11a": 100.0,
+      "V11b": 100.0,
+      "V11c": 100.0
+    },
+    "gemini_3_pro_search": {
+      "count": 8,
+      "V10": 100.0,
+      "V11a": 100.0,
+      "V11b": 100.0,
+      "V11c": 87.5
+    },
+    "m4_chatgpt": {
+      "count": 50,
+      "V10": 98.0,
+      "V11a": 98.0,
+      "V11b": 98.0,
+      "V11c": 98.0
+    }
+  },
+  "recommendation": {
+    "promote": "bert_v11c_boundary_fix",
+    "rationale": [
+      "Three-set avg 98.56% exceeds V10 baseline 98.36% (+0.20%)",
+      "Independent data 98.57% is best across all four models (+0.88% vs V10)",
+      "Fewest independent errors (13) vs V10(21), V11a(27), V11b(14)",
+      "LLaMA-405B detection restored to 100% (V10 had 88.9%)",
+      "formal_collected detection 96.5% - best across all four",
+      "Clean data pipeline: hard patterns removed, unknown samples triaged, weak domains supplemented, long-AI boundary restored",
+      "Temperature 0.8165, ECE 0.0034 - well calibrated",
+      "Regression gate: PASS with +0.20% improvement"
+    ],
+    "tradeoffs": [
+      "core_v1_test_clean 97.98% vs V10 98.35% (-0.37%) - same as V11b, acceptable given independent gains",
+      "merged_v2_val_clean 99.13% vs V11b 99.30% (-0.17%) - minor, within noise",
+      "gemini-3-pro-search 87.5% vs V10/V11b 100% (-1 sample) - new regression on 1/8 samples"
+    ]
+  }
+}

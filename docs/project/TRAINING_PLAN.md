@@ -56,7 +56,7 @@ python scripts/data_augmentation/synonym_replace.py \
 
 | 模型 | 目标数量 | API |
 |------|----------|-----|
-| DeepSeek-V3 | 5,000 | sk-WPzv2... |
+| DeepSeek-V3 | 5,000 | ENV: OPENAI_API_KEY |
 | GPT-4 | 3,000 | 待配置 |
 | Claude-3 | 3,000 | 待配置 |
 | Qwen-Max | 2,000 | 待配置 |

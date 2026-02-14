@@ -1,0 +1,64 @@
+{
+  "generated_at": "2026-02-13 15:09:11",
+  "baseline_json": "models\\bert_v11c_boundary_fix\\eval_comparison.json",
+  "candidate_json": "models\\bert_v11d_gemini_patch\\eval_comparison.json",
+  "baseline_model_key": "bert_v11c_boundary_fix",
+  "candidate_model_key": "bert_v11d_gemini_patch",
+  "gate": {
+    "baseline_three_set_avg": 98.56,
+    "candidate_three_set_avg": 98.29,
+    "three_set_avg_delta": -0.27,
+    "three_set_avg_degradation": 0.27,
+    "max_three_set_degradation": 0.5,
+    "pass_gate": true,
+    "decision": "keep_candidate",
+    "reason": "three_set_avg degradation 0.2700 <= threshold 0.5000",
+    "dataset_deltas": [
+      {
+        "dataset": "core_v1_test_clean",
+        "accuracy_baseline": 97.98,
+        "accuracy_candidate": 97.8,
+        "accuracy_delta": -0.18,
+        "precision_baseline": 97.87,
+        "precision_candidate": 97.58,
+        "precision_delta": -0.29,
+        "recall_baseline": 98.77,
+        "recall_candidate": 98.77,
+        "recall_delta": 0.0,
+        "f1_baseline": 98.32,
+        "f1_candidate": 98.17,
+        "f1_delta": -0.15
+      },
+      {
+        "dataset": "independent_data",
+        "accuracy_baseline": 98.57,
+        "accuracy_candidate": 98.02,
+        "accuracy_delta": -0.55,
+        "precision_baseline": 93.08,
+        "precision_candidate": 89.76,
+        "precision_delta": -3.32,
+        "recall_baseline": 98.67,
+        "recall_candidate": 99.33,
+        "recall_delta": 0.66,
+        "f1_baseline": 95.79,
+        "f1_candidate": 94.3,
+        "f1_delta": -1.49
+      },
+      {
+        "dataset": "merged_v2_val_clean",
+        "accuracy_baseline": 99.13,
+        "accuracy_candidate": 99.04,
+        "accuracy_delta": -0.09,
+        "precision_baseline": 98.07,
+        "precision_candidate": 97.88,
+        "precision_delta": -0.19,
+        "recall_baseline": 100.0,
+        "recall_candidate": 100.0,
+        "recall_delta": 0.0,
+        "f1_baseline": 99.03,
+        "f1_candidate": 98.93,
+        "f1_delta": -0.1
+      }
+    ]
+  }
+}

@@ -1,0 +1,108 @@
+{
+  "bert_v11c_boundary_fix": {
+    "model": "bert_v11c_boundary_fix",
+    "core_v1_test_clean": {
+      "accuracy": 97.98,
+      "precision": 97.87,
+      "recall": 98.77,
+      "f1": 98.32,
+      "samples": 545,
+      "time_sec": 6.2
+    },
+    "independent_data": {
+      "accuracy": 98.57,
+      "precision": 93.08,
+      "recall": 98.67,
+      "f1": 95.79,
+      "samples": 910,
+      "time_sec": 9.3
+    },
+    "independent_data_by_source": {
+      "Toutiao_News": {
+        "accuracy": 100.0,
+        "count": 221
+      },
+      "Toutiao_news_edu": {
+        "accuracy": 100.0,
+        "count": 38
+      },
+      "Toutiao_news_finance": {
+        "accuracy": 100.0,
+        "count": 49
+      },
+      "Toutiao_news_tech": {
+        "accuracy": 100.0,
+        "count": 69
+      },
+      "Wikipedia_CN": {
+        "accuracy": 99.16,
+        "count": 119
+      },
+      "external_m4_qazh": {
+        "accuracy": 95.92,
+        "count": 49
+      },
+      "formal_collected": {
+        "accuracy": 96.5,
+        "count": 200
+      },
+      "real_ai_deepseek-v3.2": {
+        "accuracy": 100.0,
+        "count": 8
+      },
+      "real_ai_gemini-3-flash-preview": {
+        "accuracy": 100.0,
+        "count": 16
+      },
+      "real_ai_gemini-3-pro-preview": {
+        "accuracy": 100.0,
+        "count": 24
+      },
+      "real_ai_gemini-3-pro-preview-search": {
+        "accuracy": 87.5,
+        "count": 8
+      },
+      "real_ai_glm-4.7": {
+        "accuracy": 100.0,
+        "count": 9
+      },
+      "real_ai_gpt-4": {
+        "accuracy": 100.0,
+        "count": 10
+      },
+      "real_ai_gpt-5": {
+        "accuracy": 100.0,
+        "count": 8
+      },
+      "real_ai_gpt-oss-120b": {
+        "accuracy": 100.0,
+        "count": 8
+      },
+      "real_ai_llama-3.1-405b-instruct": {
+        "accuracy": 100.0,
+        "count": 9
+      },
+      "real_ai_m4_chatgpt": {
+        "accuracy": 98.0,
+        "count": 50
+      }
+    },
+    "independent_data_errors": 13,
+    "independent_data_calibration": {
+      "optimal_T": 0.7872,
+      "ECE_before": 0.0168,
+      "ECE_after": 0.0034,
+      "high_conf_errors_before": 11,
+      "high_conf_errors_after": 12
+    },
+    "merged_v2_val_clean": {
+      "accuracy": 99.13,
+      "precision": 98.07,
+      "recall": 100.0,
+      "f1": 99.03,
+      "samples": 1144,
+      "time_sec": 12.8
+    },
+    "three_set_avg": 98.56
+  }
+}

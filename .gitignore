@@ -3,6 +3,9 @@
 *.pt
 *.pth
 *.ckpt
+*.safetensors
+*.bin
+*.onnx
 
 # 虚拟环境
 .venv/
@@ -19,9 +22,11 @@ __pycache__/
 # 数据集（使用Git LFS管理）
 # datasets/ - 已通过Git LFS追踪
 *.csv
+*.jsonl
 *.txt
 !requirements*.txt
 !.gitignore
+*.zip
 
 # 日志文件
 *.log
@@ -64,11 +69,13 @@ Thumbs.db
 new_plan_datasets/
 archive/old_datasets/
 fonts/
+_*_worktree/
 
 # 生成的数据目录（太大，不跟踪）
 datasets/generated/
 datasets/logs/
 datasets/planning/
+datasets/external/
 
 # 特殊文件
 Antigravity.exe
@@ -76,3 +83,6 @@ upload_with_token.sh
 
 # 子项目（独立仓库）
 frontend/
+
+# 部署配置（含敏感信息）
+.env.deploy

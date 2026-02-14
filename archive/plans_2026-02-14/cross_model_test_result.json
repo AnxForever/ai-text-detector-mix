@@ -1,0 +1,180 @@
+{
+  "bert_v3_core_v2": {
+    "chatgpt_ai": {
+      "accuracy": 0.9799196787148594,
+      "count": 498,
+      "correct": 488,
+      "avg_conf_correct": 0.9999676439605776,
+      "avg_conf_wrong": 0.9835669696331024,
+      "length_buckets": {
+        "300-500": {
+          "correct": 177,
+          "total": 183
+        },
+        "200-300": {
+          "correct": 151,
+          "total": 153
+        },
+        "100-200": {
+          "correct": 89,
+          "total": 90
+        },
+        "500+": {
+          "correct": 49,
+          "total": 50
+        },
+        "<100": {
+          "correct": 22,
+          "total": 22
+        }
+      }
+    },
+    "davinci_ai": {
+      "accuracy": 0.7784946236559139,
+      "count": 465,
+      "correct": 362,
+      "avg_conf_correct": 0.9976095871701425,
+      "avg_conf_wrong": 0.9962241481808782,
+      "length_buckets": {
+        "100-200": {
+          "correct": 177,
+          "total": 229
+        },
+        "<100": {
+          "correct": 47,
+          "total": 76
+        },
+        "200-300": {
+          "correct": 91,
+          "total": 103
+        },
+        "300-500": {
+          "correct": 44,
+          "total": 53
+        },
+        "500+": {
+          "correct": 3,
+          "total": 4
+        }
+      }
+    },
+    "human": {
+      "accuracy": 0.98,
+      "count": 500,
+      "correct": 490,
+      "avg_conf_correct": 0.9999406337738037,
+      "avg_conf_wrong": 0.9974781513214112,
+      "length_buckets": {
+        "200-300": {
+          "correct": 131,
+          "total": 131
+        },
+        "300-500": {
+          "correct": 50,
+          "total": 51
+        },
+        "100-200": {
+          "correct": 258,
+          "total": 261
+        },
+        "500+": {
+          "correct": 49,
+          "total": 55
+        },
+        "<100": {
+          "correct": 2,
+          "total": 2
+        }
+      }
+    }
+  },
+  "bert_v4_defense_focused": {
+    "chatgpt_ai": {
+      "accuracy": 0.9578313253012049,
+      "count": 498,
+      "correct": 477,
+      "avg_conf_correct": 0.9989019251219632,
+      "avg_conf_wrong": 0.9699700503122239,
+      "length_buckets": {
+        "300-500": {
+          "correct": 174,
+          "total": 183
+        },
+        "200-300": {
+          "correct": 148,
+          "total": 153
+        },
+        "100-200": {
+          "correct": 84,
+          "total": 90
+        },
+        "500+": {
+          "correct": 49,
+          "total": 50
+        },
+        "<100": {
+          "correct": 22,
+          "total": 22
+        }
+      }
+    },
+    "davinci_ai": {
+      "accuracy": 0.7397849462365591,
+      "count": 465,
+      "correct": 344,
+      "avg_conf_correct": 0.9936557202491649,
+      "avg_conf_wrong": 0.9789752551346771,
+      "length_buckets": {
+        "100-200": {
+          "correct": 163,
+          "total": 229
+        },
+        "<100": {
+          "correct": 43,
+          "total": 76
+        },
+        "200-300": {
+          "correct": 90,
+          "total": 103
+        },
+        "300-500": {
+          "correct": 45,
+          "total": 53
+        },
+        "500+": {
+          "correct": 3,
+          "total": 4
+        }
+      }
+    },
+    "human": {
+      "accuracy": 0.992,
+      "count": 500,
+      "correct": 496,
+      "avg_conf_correct": 0.9988244834446138,
+      "avg_conf_wrong": 0.9642799943685532,
+      "length_buckets": {
+        "200-300": {
+          "correct": 131,
+          "total": 131
+        },
+        "300-500": {
+          "correct": 50,
+          "total": 51
+        },
+        "100-200": {
+          "correct": 259,
+          "total": 261
+        },
+        "500+": {
+          "correct": 54,
+          "total": 55
+        },
+        "<100": {
+          "correct": 2,
+          "total": 2
+        }
+      }
+    }
+  }
+}

@@ -1,5 +1,8 @@
 # 中文AI文本检测系统 - 数据集与模型
 
+> ⚠️ 本文档以基线数据与发布版模型为主。  
+> 最新答辩口径请优先参考 `docs/project/DEFENSE_CURRENT_STATUS.md`。
+
 ## 📊 数据集
 
 ### 1. Combined v2 (主训练数据集)
@@ -124,27 +127,27 @@ huggingface-cli download AnxForever/chinese-ai-detection-dataset
 ```
 datacollection/
 ├── models/
-│   ├── bert_v2_with_sep/
+│   ├── bert_v10_augmented/
 │   │   ├── model.safetensors
 │   │   ├── config.json
 │   │   ├── vocab.txt
 │   │   └── tokenizer_config.json
+│   ├── bert_v2_with_sep/       # 基线模型
 │   └── bert_span_detector/
 │       └── (同上)
 │
 └── datasets/
-    ├── combined_v2/
+    ├── merged_v2/
+    │   ├── train.csv
+    │   ├── train_v10.csv
+    │   ├── val.csv
+    ├── active/core_v1/
     │   ├── train.csv
     │   ├── val.csv
-    │   ├── test.csv
-    │   └── test_hybrid_only.csv
-    ├── hybrid/
-    │   ├── hybrid_dataset_with_sep.csv
-    │   └── c2_span_labels.json
-    └── final_clean/
-        ├── train.csv
-        ├── val.csv
-        └── test.csv
+    │   └── test.csv
+    └── mixed/hybrid/
+        ├── merged_all.json
+        └── c2_*.json
 ```
 
 ---
@@ -173,7 +176,7 @@ python scripts/evaluation/eval_complete.py
 ### 4. 重新训练
 ```bash
 # 训练分类器
-python scripts/training/train_v2_simple.py
+python scripts/training/train_v10.py
 
 # 训练边界检测器
 python scripts/training/train_span_detector.py
@@ -277,4 +280,4 @@ text,label,category,boundary
 
 ---
 
-*最后更新: 2026-01-26*
+*最后更新: 2026-02-12*

@@ -1,49 +1,46 @@
 ﻿# 项目文档说明
 
-> 更新时间: 2026-01-27
+> 更新时间: 2026-02-13
+> 当前生产模型: `models/bert_v11c_boundary_fix` (T=0.8165)
 
-## 📁 根目录保留文档（精简）
+## 1) 先看这些（高频）
 
-- `README.md` - 项目主文档
-- `QUICKSTART.md` - 快速开始
-- `AGENTS.md` - AI 助手使用指南
-- `LICENSE` - 开源许可
+- `README.md` - 项目总览与快速入口
+- `QUICKSTART.md` - 一键上手
+- `docs/project/DEFENSE_CURRENT_STATUS.md` - 当前答辩口径（V11c）
+- `docs/project/FINAL_RESULTS.md` - 关键结果汇总
+- `docs/project/DATA_AND_MODELS.md` - 数据与模型对应关系
 
-## 📁 API 文档与代码（api/）
+## 2) 运行与部署
 
-- `api/api.py` - API 服务入口
-- `api/API_KEYS.md` - API 配置（内部使用）
+- `api/api.py` - API 服务入口（默认 V11c）
 - `api/README.md` - API 目录说明
+- `api/API_KEYS.md` - API 配置说明
 
-## 📁 项目文档（docs/project/）
+## 3) 评估与决策文档（V11主线）
 
-- `FINAL_RESULTS.md` - 最终实验结果 ⭐
-- `DATASET_ISSUES_FOR_AI.md` - 数据集问题分析 ⭐
-- `TRAINING_PLAN.md` - 训练计划
-（改进计划已移至 `docs/plans/IMPROVEMENT_PLAN.md`）
-- `DATA_AND_MODELS.md` - 数据与模型说明
-- `EXPERIMENT_LOG.md` - 实验日志
-- `TECHNICAL_SUMMARY_FOR_LITERATURE.md` - 技术总结
-- `PRESENTATION.md` - 演示文稿
-- `CITATION.md` - 引用信息
-- `CONTRIBUTING.md` - 贡献指南
-- `GENERATION_TASK.md` - 生成任务说明
-- `针对性数据集构建与平衡方案报告.md` - 外部建议报告
+- `docs/plans/v11_four_way_comparison.md` - V10/V11a/V11b/V11c 四方对比
+- `docs/plans/v11c_regression_gate.md` - V11c 回归门结论
+- `docs/plans/v11d_decision_2026-02-13.md` - V11d 不上线决策
+- `docs/plans/v11d2_decision_2026-02-13.md` - V11d2 失败回滚决策
+- `docs/plans/README.md` - plans 目录索引
 
-## 📁 计划文档（docs/plans/）
+## 4) 结构与治理文档
 
-- `docs/plans/README.md` - 计划文档索引
-- `docs/plans/data_construction_plan.md` - 数据构建计划
-- `docs/plans/data_audit_plan.md` - 数据审计计划
-- `docs/plans/data_evaluation_plan.md` - 数据评估计划
-- `docs/plans/model_training_plan.md` - 模型训练计划
-- `docs/plans/data_evaluation_system_plan.md` - 数据评价系统计划
+- `docs/project/WORKSPACE_STRUCTURE.md` - 工作区结构与活跃路径
+- `archive/cleanup_2026-02-13/CLEANUP_MANIFEST.md` - 本轮清理清单与恢复命令
+- `docs/project/CLEANUP_PHASE2_CANDIDATES.md` - 第二轮清理候选（提案）
+- `docs/project/RISK_IMPLEMENTATION_2026-02-12.md` - 风险治理实现
+- `docs/project/DEFENSE_FIX_CHECKLIST_2026-02-12.md` - 修复项总清单
 
-## 📦 归档文档（docs/archive/ 与 archive/）
+## 5) 归档区（历史/失败实验）
 
-- `docs/archive/` - 旧版/历史文档
-- `archive/` - 归档脚本与临时文件
+- `archive/cleanup_2026-02-13/` - 已移出的 V11d/V11d2 模型与数据
+- `archive/configs_legacy_2026-02-13/` - 已移出的历史生成配置
+- `docs/plans/archive_failed_v11d/` - V11d/V11d2 的构建和交接文档
+- `docs/archive/` - 旧版历史文档
 
 ---
 
-如需查找具体文档，请优先从 `docs/` 目录开始。
+如果只做当前版本开发，请优先聚焦：`api/`、`models/bert_v11c_boundary_fix/`、
+`datasets/merged_v2/`、`scripts/{training,evaluation,data_cleaning}/`。

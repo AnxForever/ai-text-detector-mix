@@ -3,7 +3,7 @@
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.12-green.svg)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red.svg)](https://pytorch.org/)
-[![Accuracy](https://img.shields.io/badge/Accuracy-98.71%25-brightgreen.svg)](docs/project/FINAL_RESULTS.md)
+[![Three-Set Avg](https://img.shields.io/badge/Three--Set_Avg-98.36%25-brightgreen.svg)](docs/project/DEFENSE_CURRENT_STATUS.md)
 
 > 中文AI文本检测系统 - 基于边界标记的混合文本检测
 
@@ -12,8 +12,9 @@
 针对中文混合文本（人类+AI）的检测系统，实现了从粗粒度分类到细粒度边界定位的完整解决方案。
 
 ### 核心成果
-- ✅ **整体准确率**: 98.71%
-- ✅ **C2混合文本检测**: 93.84% (提升14%)
+- ✅ **当前推荐模型**: `bert_v10_augmented`
+- ✅ **三集平均准确率**: 98.36% (core_v1_test + independent + merged_v2_val)
+- ✅ **独立评估集准确率**: 97.69%
 - ✅ **边界定位准确率**: 96.69% (Token级)
 - ✅ **实际边界误差**: <10字符
 
@@ -22,13 +23,14 @@
 - 🔥 **双层检测架构**: 分类器 + 边界检测器
 - 🔥 **Token级精确定位**: 实现细粒度边界检测
 
-📖 **完整成果**: [docs/project/FINAL_RESULTS.md](docs/project/FINAL_RESULTS.md) | **数据模型**: [docs/project/DATA_AND_MODELS.md](docs/project/DATA_AND_MODELS.md)
+📖 **答辩快照（最新）**: [docs/project/DEFENSE_CURRENT_STATUS.md](docs/project/DEFENSE_CURRENT_STATUS.md)
+📖 **基线结果（v2阶段）**: [docs/project/FINAL_RESULTS.md](docs/project/FINAL_RESULTS.md)
 
 ## 🤗 Hugging Face模型
 
-- 🔥 [BERT分类器](https://huggingface.co/AnxForever/chinese-ai-detector-bert) - 98.71%准确率
+- 🔥 [BERT分类器（基线发布）](https://huggingface.co/AnxForever/chinese-ai-detector-bert) - 98.71%准确率
 - 🎯 [边界检测器](https://huggingface.co/AnxForever/chinese-ai-detector-span) - Token级定位
-- 📊 [训练数据集](https://huggingface.co/datasets/AnxForever/chinese-ai-detection-dataset) - 66K样本
+- 📊 [训练数据集](https://huggingface.co/datasets/AnxForever/chinese-ai-detection-dataset) - 66K样本（基线）
 
 ---
 
@@ -60,32 +62,19 @@ python scripts/evaluation/generate_report.py
 
 ```
 datacollection/
-├── 📖 文档
-│   ├── README.md              # 本文档
-│   ├── QUICKSTART.md          # 快速开始
-│   ├── docs/                  # 统一文档目录
-│   │   ├── project/           # 项目核心文档
-│   │   └── plans/             # 计划与审计
-│   └── api/                   # API代码与配置
-│
-├── 🤖 模型 (779MB)
-│   ├── bert_v2_with_sep/      # 主分类器 (98.71%准确率)
-│   └── bert_span_detector/    # 边界检测器 (96.69%准确率)
-│
-├── 📊 数据集 (575MB)
-│   ├── combined_v2/           # 训练数据 (66,001条)
-│   ├── hybrid/                # 混合数据 (7,563条)
-│   └── final_clean/           # 基础数据 (55,438条)
-│
-├── 🛠️ 脚本
-│   ├── training/              # 训练脚本
-│   ├── evaluation/            # 评估脚本
-│   ├── demo/                  # 演示脚本 ⭐
-│   └── data_cleaning/         # 数据处理
-│
-└── 📈 结果
-    ├── evaluation_results/    # 评估报告
-    └── logs/                  # 训练日志
+├── api/                       # FastAPI 服务
+├── scripts/                   # 训练/评估/生成/清洗脚本
+│   ├── training/
+│   ├── evaluation/
+│   ├── generation/
+│   ├── data_cleaning/
+│   └── demo/
+├── models/                    # 多代模型（推荐: bert_v10_augmented）
+├── datasets/                  # active/eval/mixed/raw/analysis
+├── docs/                      # 项目文档与计划
+│   ├── project/
+│   └── plans/
+└── frontend/                  # 毕设演示前端（Next.js）
 ```
 
 ---
@@ -94,13 +83,12 @@ datacollection/
 
 ### 模型性能
 
-| 指标 | 数值 |
-|------|------|
-| 整体准确率 | 98.71% |
-| C2 (续写) | 93.84% |
-| C3 (改写) | 100% |
-| C4 (润色) | 92.89% |
-| Token分类 | 96.69% |
+| 指标 | 数值（当前推荐） |
+|------|------------------|
+| 验证集准确率 (V10) | 98.85% |
+| 独立评估集 (910) | 97.69% |
+| 三集平均 | 98.36% |
+| Token分类 (Span) | 96.69% |
 
 ### 技术创新
 
@@ -114,7 +102,9 @@ datacollection/
 
 | 数据集 | 样本数 | 说明 |
 |--------|--------|------|
-| Combined v2 | 66,001 | 训练/验证/测试 |
+| core_v1 | 58,563 | 基线训练/验证/测试 |
+| merged_v2 | 69,347 | v8/v9/v10主数据池 |
+| train_v10 | 62,980 | v10训练集 |
 | 混合数据 | 7,563 | C2/C3/C4/Human |
 | Span标注 | 2,034 | Token级标注 |
 
@@ -136,10 +126,11 @@ datacollection/
 
 ## 📞 更多信息
 
-- 完整成果: [docs/project/FINAL_RESULTS.md](docs/project/FINAL_RESULTS.md)
+- 当前答辩口径: [docs/project/DEFENSE_CURRENT_STATUS.md](docs/project/DEFENSE_CURRENT_STATUS.md)
+- 完整成果（基线）: [docs/project/FINAL_RESULTS.md](docs/project/FINAL_RESULTS.md)
 - 训练计划: [docs/project/TRAINING_PLAN.md](docs/project/TRAINING_PLAN.md)
 - 评估报告: `evaluation_results/final_report.txt`
 
 ---
 
-*最后更新: 2026-01-26*
+*最后更新: 2026-02-12*

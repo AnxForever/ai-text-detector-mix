@@ -12,7 +12,10 @@
 
 | 数据集 | 路径 | 说明 |
 |-------|------|------|
-| **core_v1** | `datasets/active/core_v1/` | 主训练集 (66,001条) |
+| core_v1 | `datasets/active/core_v1/` | 基线主训练集 (58,563条) |
+| core_v2 | `datasets/active/core_v2/` | 扩展训练集 (71,794条) |
+| core_v3 | `datasets/active/core_v3/` | 新版训练集 (67,828条，无独立test) |
+| **merged_v2** | `datasets/merged_v2/` | v8/v9/v10推荐训练数据池 (69,347条) |
 
 ### 评估数据集
 
@@ -47,14 +50,23 @@
 
 ```
 datasets/active/core_v1/
-├── train.csv        # 训练集 (52,800条)
-├── val.csv          # 验证集 (6,600条)
-├── test.csv         # 测试集 (6,601条)
+├── train.csv        # 训练集 (46,849条)
+├── val.csv          # 验证集 (5,856条)
+├── test.csv         # 测试集 (5,858条)
 ├── full_dataset.csv # 完整数据
 ├── all_human.csv    # 纯人类文本
 ├── all_ai.csv       # 纯AI文本
 ├── merge_log.json   # 合并日志
 └── README.md
+```
+
+### merged_v2 (当前推荐训练池)
+
+```
+datasets/merged_v2/
+├── train.csv        # 训练集 (61,872条)
+├── train_v10.csv    # V10训练集 (62,980条)
+└── val.csv          # 验证集 (7,475条)
 ```
 
 ### 数据格式
@@ -88,6 +100,12 @@ datasets/mixed/hybrid/
       "category": "active_train_candidates",
       "path": "datasets/active/core_v1",
       "recommended": "true"
+    },
+    {
+      "name": "merged_v2",
+      "category": "active_train_candidates",
+      "path": "datasets/merged_v2",
+      "recommended": "true"
     }
   ]
 }
@@ -118,15 +136,20 @@ with open('datasets/mixed/hybrid/merged_all.json', 'r', encoding='utf-8') as f:
 
 | 数据集 | 样本数 | Human | AI |
 |-------|-------|-------|-----|
-| core_v1 训练集 | 52,800 | ~26,400 | ~26,400 |
-| core_v1 验证集 | 6,600 | ~3,300 | ~3,300 |
-| core_v1 测试集 | 6,601 | ~3,300 | ~3,301 |
+| core_v1 训练集 | 46,849 | - | - |
+| core_v1 验证集 | 5,856 | - | - |
+| core_v1 测试集 | 5,858 | - | - |
+| merged_v2 训练集 | 61,872 | - | - |
+| merged_v2 验证集 | 7,475 | - | - |
+| merged_v2 train_v10 | 62,980 | - | - |
 | 混合数据 | 7,563 | 1,500 | 6,063 |
 
 ## 常见问题 (FAQ)
 
 **Q: 应该使用哪个数据集训练?**
-A: 使用 `datasets/active/core_v1/`，这是经过清洗和去重的推荐数据集。
+A:
+- 复现实验基线（v2）: 使用 `datasets/active/core_v1/`
+- 复现当前最佳模型（v10）: 使用 `datasets/merged_v2/train_v10.csv`
 
 **Q: 混合数据中C2/C3/C4是什么?**
 A:
@@ -161,9 +184,14 @@ datasets/
 
 ## 变更记录 (Changelog)
 
+### 2026-02-12
+- 同步 core_v1/core_v2/core_v3/merged_v2 的实际规模
+- 新增 `merged_v2` 训练池说明和 V10 入口文件
+- 更新训练数据选择建议（基线 vs 当前最佳）
+
 ### 2026-01-28
 - 初始化模块文档
 
 ---
 
-*文档生成时间: 2026-01-28T12:42:53+0800*
+*文档更新时间: 2026-02-12*

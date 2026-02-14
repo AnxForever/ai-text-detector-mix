@@ -1,0 +1,43 @@
+{
+  "generated_at": "2026-02-13",
+  "models": {
+    "bert_v10_augmented": {
+      "training_rows": 62980,
+      "strategy": "V9 data + 1296 targeted augmentation",
+      "three_set_avg": 98.36,
+      "core_v1_test_clean": {"accuracy": 98.35, "precision": 98.47, "recall": 98.77, "f1": 98.62},
+      "independent_data": {"accuracy": 97.69, "precision": 89.09, "recall": 98.0, "f1": 93.33, "errors": 21},
+      "merged_v2_val_clean": {"accuracy": 99.04, "precision": 98.26, "recall": 99.61, "f1": 98.93},
+      "calibration": {"optimal_T": 0.8931, "ECE_after": 0.0058}
+    },
+    "bert_v11a_clean": {
+      "training_rows": 60456,
+      "strategy": "V10 minus risk-flagged patterns and unapproved unknown sources",
+      "three_set_avg": 97.75,
+      "core_v1_test_clean": {"accuracy": 97.43, "precision": 96.99, "recall": 98.77, "f1": 97.87},
+      "independent_data": {"accuracy": 97.03, "precision": 85.14, "recall": 99.33, "f1": 91.69, "errors": 27},
+      "merged_v2_val_clean": {"accuracy": 98.78, "precision": 97.69, "recall": 99.61, "f1": 98.64},
+      "calibration": {"optimal_T": 0.9122, "ECE_after": 0.0078},
+      "regression_gate": {"delta_vs_v10": -0.61, "decision": "FAIL"}
+    },
+    "bert_v11b_augmented": {
+      "training_rows": 61056,
+      "strategy": "V11a cleaned data + 600 weak domain supplement",
+      "three_set_avg": 98.58,
+      "core_v1_test_clean": {"accuracy": 97.98, "precision": 97.87, "recall": 98.77, "f1": 98.32},
+      "independent_data": {"accuracy": 98.46, "precision": 91.98, "recall": 99.33, "f1": 95.51, "errors": 14},
+      "merged_v2_val_clean": {"accuracy": 99.3, "precision": 98.45, "recall": 100.0, "f1": 99.22},
+      "calibration": {"optimal_T": 0.8468, "ECE_after": 0.0031},
+      "regression_gate": {"delta_vs_v10": 0.22, "decision": "PASS"}
+    }
+  },
+  "decision": {
+    "winner": "bert_v11b_augmented",
+    "reason": "Passes regression gate (+0.22%), best-ever independent_data (98.46%), best calibration (ECE=0.0031), 33% fewer errors than V10",
+    "deployment": {
+      "model_path": "models/bert_v11b_augmented",
+      "max_length": 256,
+      "temperature": 0.8468
+    }
+  }
+}

@@ -20,6 +20,8 @@ docs/
 
 | 文档 | 说明 | 重要程度 |
 |-----|------|---------|
+| `DEFENSE_CURRENT_STATUS.md` | 答辩口径快照（最新） | 高 |
+| `RISK_IMPLEMENTATION_2026-02-12.md` | 风险治理实现记录 | 高 |
 | `FINAL_RESULTS.md` | 最终实验结果 | 高 |
 | `DATASET_ISSUES_FOR_AI.md` | 数据集问题分析 | 高 |
 | `TRAINING_PLAN.md` | 训练计划 | 中 |
@@ -42,6 +44,8 @@ docs/
 | `model_training_plan.md` | 模型训练计划 |
 | `data_evaluation_system_plan.md` | 数据评价系统计划 |
 | `IMPROVEMENT_PLAN.md` | 改进计划 |
+| `risk_governance_workflow.md` | 风险治理执行流程（V10->V11） |
+| `risk_governance_addendum_2026-02-12.md` | Risk governance addendum (A1/B2/C2/rollback) |
 | `audit_reports/` | 审计报告目录 |
 
 ## 其他文档
@@ -59,8 +63,8 @@ docs/
 
 ### 了解项目成果
 
-1. 阅读 `docs/project/FINAL_RESULTS.md`
-2. 查看 `docs/project/DATA_AND_MODELS.md`
+1. 查看 `docs/project/DEFENSE_CURRENT_STATUS.md`
+2. 阅读 `docs/project/FINAL_RESULTS.md`（基线阶段）
 
 ### 了解数据问题
 
@@ -105,9 +109,16 @@ docs/
 
 ## 变更记录 (Changelog)
 
+### 2026-02-12
+- 新增 `DEFENSE_CURRENT_STATUS.md` 入口
+- 更新“项目成果”导航顺序（最新口径优先）
+- 新增 `risk_governance_workflow.md` 计划文档入口
+- Added `risk_governance_addendum_2026-02-12.md` entry
+- 新增 `RISK_IMPLEMENTATION_2026-02-12.md` 实现记录
+
 ### 2026-01-28
 - 初始化模块文档
 
 ---
 
-*文档生成时间: 2026-01-28T12:42:53+0800*
+*文档更新时间: 2026-02-12*

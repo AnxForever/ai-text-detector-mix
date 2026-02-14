@@ -1,0 +1,56 @@
+{
+  "generated_at": "2026-02-12 19:20:59",
+  "weak_domain_count": 2,
+  "min_per_weak_domain": 300,
+  "total_required_new_samples": 600,
+  "domains": [
+    {
+      "source": "real_ai_llama-3.1-405b-instruct",
+      "accuracy": 88.89,
+      "eval_count": 9,
+      "current_train_count": 0,
+      "target_train_count": 300,
+      "required_new_samples": 300,
+      "diversity_now": {
+        "rows": 0,
+        "unique_prefix_count": 0,
+        "unique_prefix_ratio": 0.0,
+        "top_prefix_share": 0.0,
+        "duplicate_text_ratio": 0.0
+      },
+      "diversity_targets": {
+        "min_unique_prefix_ratio": 0.7,
+        "max_top_prefix_share": 0.2
+      },
+      "quality_rules": [
+        "at_least_3_prompt_families_if_generated",
+        "avoid_single_template_batching",
+        "manual_spot_check_5_percent"
+      ]
+    },
+    {
+      "source": "formal_collected",
+      "accuracy": 92.5,
+      "eval_count": 200,
+      "current_train_count": 0,
+      "target_train_count": 300,
+      "required_new_samples": 300,
+      "diversity_now": {
+        "rows": 0,
+        "unique_prefix_count": 0,
+        "unique_prefix_ratio": 0.0,
+        "top_prefix_share": 0.0,
+        "duplicate_text_ratio": 0.0
+      },
+      "diversity_targets": {
+        "min_unique_prefix_ratio": 0.7,
+        "max_top_prefix_share": 0.2
+      },
+      "quality_rules": [
+        "at_least_3_prompt_families_if_generated",
+        "avoid_single_template_batching",
+        "manual_spot_check_5_percent"
+      ]
+    }
+  ]
+}

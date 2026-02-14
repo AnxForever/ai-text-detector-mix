@@ -1,0 +1,64 @@
+{
+  "generated_at": "2026-02-12 21:41:49",
+  "baseline_json": "/mnt/c/datacollection/models/bert_v10_augmented/eval_comparison.json",
+  "candidate_json": "/mnt/c/datacollection/models/bert_v11a_clean/eval_comparison.json",
+  "baseline_model_key": "bert_v10_augmented",
+  "candidate_model_key": "bert_v11a_clean",
+  "gate": {
+    "baseline_three_set_avg": 98.36,
+    "candidate_three_set_avg": 97.75,
+    "three_set_avg_delta": -0.61,
+    "three_set_avg_degradation": 0.61,
+    "max_three_set_degradation": 0.5,
+    "pass_gate": false,
+    "decision": "rollback_to_baseline",
+    "reason": "three_set_avg degradation 0.6100 > threshold 0.5000",
+    "dataset_deltas": [
+      {
+        "dataset": "core_v1_test_clean",
+        "accuracy_baseline": 98.35,
+        "accuracy_candidate": 97.43,
+        "accuracy_delta": -0.92,
+        "precision_baseline": 98.47,
+        "precision_candidate": 96.99,
+        "precision_delta": -1.48,
+        "recall_baseline": 98.77,
+        "recall_candidate": 98.77,
+        "recall_delta": 0.0,
+        "f1_baseline": 98.62,
+        "f1_candidate": 97.87,
+        "f1_delta": -0.75
+      },
+      {
+        "dataset": "independent_data",
+        "accuracy_baseline": 97.69,
+        "accuracy_candidate": 97.03,
+        "accuracy_delta": -0.66,
+        "precision_baseline": 89.09,
+        "precision_candidate": 85.14,
+        "precision_delta": -3.95,
+        "recall_baseline": 98.0,
+        "recall_candidate": 99.33,
+        "recall_delta": 1.33,
+        "f1_baseline": 93.33,
+        "f1_candidate": 91.69,
+        "f1_delta": -1.64
+      },
+      {
+        "dataset": "merged_v2_val_clean",
+        "accuracy_baseline": 99.04,
+        "accuracy_candidate": 98.78,
+        "accuracy_delta": -0.26,
+        "precision_baseline": 98.26,
+        "precision_candidate": 97.69,
+        "precision_delta": -0.57,
+        "recall_baseline": 99.61,
+        "recall_candidate": 99.61,
+        "recall_delta": 0.0,
+        "f1_baseline": 98.93,
+        "f1_candidate": 98.64,
+        "f1_delta": -0.29
+      }
+    ]
+  }
+}

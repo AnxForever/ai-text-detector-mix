@@ -1,0 +1,625 @@
+{
+  "dataset": "datasets\\merged_v2\\train_v11c_candidate.csv",
+  "basic": {
+    "rows": 63187,
+    "label_counts": {
+      "0": 30381,
+      "1": 32806
+    },
+    "ai_ratio_pct": 51.92,
+    "source_unique": 137,
+    "unknown_source_rows": 1637
+  },
+  "length_overall": {
+    "mean": 686.33,
+    "median": 313,
+    "p90": 1888,
+    "p95": 2345,
+    "p99": 3205
+  },
+  "length_by_label": {
+    "human": {
+      "count": 30381,
+      "mean": 400.03,
+      "median": 201,
+      "p90": 1014,
+      "p95": 1410,
+      "p99": 2276
+    },
+    "ai": {
+      "count": 32806,
+      "mean": 951.47,
+      "median": 595,
+      "p90": 2269,
+      "p95": 2692,
+      "p99": 3490
+    }
+  },
+  "length_buckets": [
+    {
+      "bucket": "0-64",
+      "count": 3294,
+      "ai_ratio_pct": 9.35,
+      "human": 2986,
+      "ai": 308
+    },
+    {
+      "bucket": "64-128",
+      "count": 9034,
+      "ai_ratio_pct": 45.64,
+      "human": 4911,
+      "ai": 4123
+    },
+    {
+      "bucket": "128-256",
+      "count": 16059,
+      "ai_ratio_pct": 33.2,
+      "human": 10727,
+      "ai": 5332
+    },
+    {
+      "bucket": "256-512",
+      "count": 10270,
+      "ai_ratio_pct": 56.57,
+      "human": 4460,
+      "ai": 5810
+    },
+    {
+      "bucket": "512-1024",
+      "count": 8824,
+      "ai_ratio_pct": 51.14,
+      "human": 4311,
+      "ai": 4513
+    },
+    {
+      "bucket": "1024-2048",
+      "count": 10680,
+      "ai_ratio_pct": 76.3,
+      "human": 2531,
+      "ai": 8149
+    },
+    {
+      "bucket": "2048+",
+      "count": 5026,
+      "ai_ratio_pct": 90.95,
+      "human": 455,
+      "ai": 4571
+    }
+  ],
+  "top_sources": [
+    {
+      "source": "hc3_human",
+      "count": 14176,
+      "ai_ratio_pct": 0.0,
+      "avg_len": 186.5,
+      "family": "hc3_human",
+      "text_type": "qa_dialogue_human",
+      "domain_tag": "qa_general"
+    },
+    {
+      "source": "hc3_chatgpt",
+      "count": 12790,
+      "ai_ratio_pct": 100.0,
+      "avg_len": 208.4,
+      "family": "hc3_chatgpt",
+      "text_type": "qa_dialogue_ai",
+      "domain_tag": "qa_general"
+    },
+    {
+      "source": "thucnews",
+      "count": 6930,
+      "ai_ratio_pct": 0.0,
+      "avg_len": 940.8,
+      "family": "thucnews",
+      "text_type": "news_report",
+      "domain_tag": "news_general"
+    },
+    {
+      "source": "Senior_qwen",
+      "count": 3202,
+      "ai_ratio_pct": 100.0,
+      "avg_len": 1391.8,
+      "family": "senior_ai",
+      "text_type": "instruction_ai_generation",
+      "domain_tag": "general_mixed"
+    },
+    {
+      "source": "Senior_deepseek",
+      "count": 3163,
+      "ai_ratio_pct": 100.0,
+      "avg_len": 1834.5,
+      "family": "senior_ai",
+      "text_type": "instruction_ai_generation",
+      "domain_tag": "general_mixed"
+    },
+    {
+      "source": "external_m4_qazh",
+      "count": 2673,
+      "ai_ratio_pct": 0.0,
+      "avg_len": 331.5,
+      "family": "external",
+      "text_type": "external_mixed",
+      "domain_tag": "qa_general"
+    },
+    {
+      "source": "Wikipedia_CN",
+      "count": 1863,
+      "ai_ratio_pct": 0.0,
+      "avg_len": 741.5,
+      "family": "encyclopedia",
+      "text_type": "encyclopedia_knowledge",
+      "domain_tag": "knowledge_general"
+    },
+    {
+      "source": "parallel_gpt-4.1-mini",
+      "count": 1638,
+      "ai_ratio_pct": 100.0,
+      "avg_len": 1529.8,
+      "family": "parallel_ai",
+      "text_type": "instruction_ai_generation",
+      "domain_tag": "general_mixed"
+    },
+    {
+      "source": "unknown",
+      "count": 1637,
+      "ai_ratio_pct": 65.49,
+      "avg_len": 532.9,
+      "family": "unknown",
+      "text_type": "unknown",
+      "domain_tag": "general_mixed"
+    },
+    {
+      "source": "parallel_deepseek-v3.2",
+      "count": 924,
+      "ai_ratio_pct": 100.0,
+      "avg_len": 1901.9,
+      "family": "parallel_ai",
+      "text_type": "instruction_ai_generation",
+      "domain_tag": "general_mixed"
+    },
+    {
+      "source": "parallel_Kimi-K2",
+      "count": 878,
+      "ai_ratio_pct": 100.0,
+      "avg_len": 1818.2,
+      "family": "parallel_ai",
+      "text_type": "instruction_ai_generation",
+      "domain_tag": "general_mixed"
+    },
+    {
+      "source": "parallel_gemini-2.5-flash",
+      "count": 850,
+      "ai_ratio_pct": 100.0,
+      "avg_len": 320.0,
+      "family": "parallel_ai",
+      "text_type": "instruction_ai_generation",
+      "domain_tag": "general_mixed"
+    },
+    {
+      "source": "parallel_claude-haiku-4-5-20251001",
+      "count": 822,
+      "ai_ratio_pct": 100.0,
+      "avg_len": 1783.4,
+      "family": "parallel_ai",
+      "text_type": "instruction_ai_generation",
+      "domain_tag": "general_mixed"
+    },
+    {
+      "source": "parallel_cursor2-gpt-5",
+      "count": 711,
+      "ai_ratio_pct": 100.0,
+      "avg_len": 2145.0,
+      "family": "parallel_ai",
+      "text_type": "instruction_ai_generation",
+      "domain_tag": "general_mixed"
+    },
+    {
+      "source": "Toutiao_news_tech",
+      "count": 708,
+      "ai_ratio_pct": 0.0,
+      "avg_len": 32.9,
+      "family": "toutiao_news",
+      "text_type": "news_report",
+      "domain_tag": "technology"
+    },
+    {
+      "source": "auto_custom",
+      "count": 639,
+      "ai_ratio_pct": 100.0,
+      "avg_len": 1014.6,
+      "family": "auto_ai",
+      "text_type": "instruction_ai_generation",
+      "domain_tag": "general_mixed"
+    },
+    {
+      "source": "auto_deepseek",
+      "count": 629,
+      "ai_ratio_pct": 100.0,
+      "avg_len": 1759.4,
+      "family": "auto_ai",
+      "text_type": "instruction_ai_generation",
+      "domain_tag": "general_mixed"
+    },
+    {
+      "source": "parallel_deepseek-v3.2-chat",
+      "count": 562,
+      "ai_ratio_pct": 100.0,
+      "avg_len": 1915.2,
+      "family": "parallel_ai",
+      "text_type": "instruction_ai_generation",
+      "domain_tag": "general_mixed"
+    },
+    {
+      "source": "parallel_claude-sonnet-4-5",
+      "count": 535,
+      "ai_ratio_pct": 100.0,
+      "avg_len": 2540.3,
+      "family": "parallel_ai",
+      "text_type": "instruction_ai_generation",
+      "domain_tag": "general_mixed"
+    },
+    {
+      "source": "parallel_qwen-max-latest",
+      "count": 524,
+      "ai_ratio_pct": 100.0,
+      "avg_len": 1641.3,
+      "family": "parallel_ai",
+      "text_type": "instruction_ai_generation",
+      "domain_tag": "general_mixed"
+    },
+    {
+      "source": "Toutiao_news_finance",
+      "count": 437,
+      "ai_ratio_pct": 0.0,
+      "avg_len": 32.7,
+      "family": "toutiao_news",
+      "text_type": "news_report",
+      "domain_tag": "finance"
+    },
+    {
+      "source": "Toutiao_news_edu",
+      "count": 388,
+      "ai_ratio_pct": 0.0,
+      "avg_len": 33.0,
+      "family": "toutiao_news",
+      "text_type": "news_report",
+      "domain_tag": "education"
+    },
+    {
+      "source": "v11c_long_ai_deepseek",
+      "count": 366,
+      "ai_ratio_pct": 100.0,
+      "avg_len": 887.4,
+      "family": "v11c_long_ai_supplement",
+      "text_type": "long_text_ai_supplement",
+      "domain_tag": "general_mixed"
+    },
+    {
+      "source": "v11c_long_ai_gpt4",
+      "count": 365,
+      "ai_ratio_pct": 100.0,
+      "avg_len": 1000.7,
+      "family": "v11c_long_ai_supplement",
+      "text_type": "long_text_ai_supplement",
+      "domain_tag": "general_mixed"
+    },
+    {
+      "source": "v11c_long_ai_glm",
+      "count": 365,
+      "ai_ratio_pct": 100.0,
+      "avg_len": 1009.6,
+      "family": "v11c_long_ai_supplement",
+      "text_type": "long_text_ai_supplement",
+      "domain_tag": "general_mixed"
+    },
+    {
+      "source": "v11c_long_ai_llama",
+      "count": 364,
+      "ai_ratio_pct": 100.0,
+      "avg_len": 952.1,
+      "family": "v11c_long_ai_supplement",
+      "text_type": "long_text_ai_supplement",
+      "domain_tag": "general_mixed"
+    },
+    {
+      "source": "v11c_long_ai_gpt-oss",
+      "count": 343,
+      "ai_ratio_pct": 100.0,
+      "avg_len": 827.8,
+      "family": "v11c_long_ai_supplement",
+      "text_type": "long_text_ai_supplement",
+      "domain_tag": "general_mixed"
+    },
+    {
+      "source": "Review_ChnSentiCorp_htl_all",
+      "count": 313,
+      "ai_ratio_pct": 0.0,
+      "avg_len": 142.7,
+      "family": "review",
+      "text_type": "user_review",
+      "domain_tag": "entertainment"
+    },
+    {
+      "source": "real_ai_llama-3.1-405b-instruct",
+      "count": 300,
+      "ai_ratio_pct": 100.0,
+      "avg_len": 765.4,
+      "family": "real_ai",
+      "text_type": "realworld_ai_generation",
+      "domain_tag": "general_mixed"
+    },
+    {
+      "source": "formal_collected",
+      "count": 300,
+      "ai_ratio_pct": 0.0,
+      "avg_len": 103.3,
+      "family": "formal_collected",
+      "text_type": "formal_document",
+      "domain_tag": "formal_public_docs"
+    }
+  ],
+  "source_family_distribution": [
+    {
+      "source_family": "hc3_human",
+      "count": 14887,
+      "ai_ratio_pct": 0.0,
+      "avg_len": 186.7,
+      "source_count": 4
+    },
+    {
+      "source_family": "hc3_chatgpt",
+      "count": 12790,
+      "ai_ratio_pct": 100.0,
+      "avg_len": 208.4,
+      "source_count": 1
+    },
+    {
+      "source_family": "parallel_ai",
+      "count": 7630,
+      "ai_ratio_pct": 100.0,
+      "avg_len": 1684.0,
+      "source_count": 12
+    },
+    {
+      "source_family": "thucnews",
+      "count": 6930,
+      "ai_ratio_pct": 0.0,
+      "avg_len": 940.8,
+      "source_count": 1
+    },
+    {
+      "source_family": "senior_ai",
+      "count": 6365,
+      "ai_ratio_pct": 100.0,
+      "avg_len": 1611.8,
+      "source_count": 2
+    },
+    {
+      "source_family": "external",
+      "count": 2894,
+      "ai_ratio_pct": 0.0,
+      "avg_len": 323.9,
+      "source_count": 2
+    },
+    {
+      "source_family": "v11c_long_ai_supplement",
+      "count": 2131,
+      "ai_ratio_pct": 100.0,
+      "avg_len": 939.2,
+      "source_count": 7
+    },
+    {
+      "source_family": "encyclopedia",
+      "count": 1863,
+      "ai_ratio_pct": 0.0,
+      "avg_len": 741.5,
+      "source_count": 1
+    },
+    {
+      "source_family": "toutiao_news",
+      "count": 1650,
+      "ai_ratio_pct": 0.0,
+      "avg_len": 32.8,
+      "source_count": 8
+    },
+    {
+      "source_family": "unknown",
+      "count": 1637,
+      "ai_ratio_pct": 65.49,
+      "avg_len": 532.9,
+      "source_count": 1
+    },
+    {
+      "source_family": "auto_ai",
+      "count": 1334,
+      "ai_ratio_pct": 100.0,
+      "avg_len": 1397.2,
+      "source_count": 3
+    },
+    {
+      "source_family": "v10_supplement",
+      "count": 1261,
+      "ai_ratio_pct": 37.03,
+      "avg_len": 433.6,
+      "source_count": 20
+    },
+    {
+      "source_family": "other",
+      "count": 776,
+      "ai_ratio_pct": 92.4,
+      "avg_len": 417.9,
+      "source_count": 71
+    },
+    {
+      "source_family": "review",
+      "count": 439,
+      "ai_ratio_pct": 0.0,
+      "avg_len": 117.7,
+      "source_count": 2
+    },
+    {
+      "source_family": "formal_collected",
+      "count": 300,
+      "ai_ratio_pct": 0.0,
+      "avg_len": 103.3,
+      "source_count": 1
+    },
+    {
+      "source_family": "real_ai",
+      "count": 300,
+      "ai_ratio_pct": 100.0,
+      "avg_len": 765.4,
+      "source_count": 1
+    }
+  ],
+  "text_type_distribution": [
+    {
+      "text_type": "instruction_ai_generation",
+      "count": 15329,
+      "ai_ratio_pct": 100.0,
+      "avg_len": 1629.1
+    },
+    {
+      "text_type": "qa_dialogue_human",
+      "count": 14887,
+      "ai_ratio_pct": 0.0,
+      "avg_len": 186.7
+    },
+    {
+      "text_type": "qa_dialogue_ai",
+      "count": 12790,
+      "ai_ratio_pct": 100.0,
+      "avg_len": 208.4
+    },
+    {
+      "text_type": "news_report",
+      "count": 8580,
+      "ai_ratio_pct": 0.0,
+      "avg_len": 766.2
+    },
+    {
+      "text_type": "external_mixed",
+      "count": 2894,
+      "ai_ratio_pct": 0.0,
+      "avg_len": 323.9
+    },
+    {
+      "text_type": "long_text_ai_supplement",
+      "count": 2131,
+      "ai_ratio_pct": 100.0,
+      "avg_len": 939.2
+    },
+    {
+      "text_type": "encyclopedia_knowledge",
+      "count": 1863,
+      "ai_ratio_pct": 0.0,
+      "avg_len": 741.5
+    },
+    {
+      "text_type": "unknown",
+      "count": 1637,
+      "ai_ratio_pct": 65.49,
+      "avg_len": 532.9
+    },
+    {
+      "text_type": "targeted_ai_supplement",
+      "count": 1261,
+      "ai_ratio_pct": 37.03,
+      "avg_len": 433.6
+    },
+    {
+      "text_type": "other",
+      "count": 776,
+      "ai_ratio_pct": 92.4,
+      "avg_len": 417.9
+    },
+    {
+      "text_type": "user_review",
+      "count": 439,
+      "ai_ratio_pct": 0.0,
+      "avg_len": 117.7
+    },
+    {
+      "text_type": "formal_document",
+      "count": 300,
+      "ai_ratio_pct": 0.0,
+      "avg_len": 103.3
+    },
+    {
+      "text_type": "realworld_ai_generation",
+      "count": 300,
+      "ai_ratio_pct": 100.0,
+      "avg_len": 765.4
+    }
+  ],
+  "domain_tag_distribution": [
+    {
+      "domain_tag": "qa_general",
+      "count": 30118,
+      "ai_ratio_pct": 42.47
+    },
+    {
+      "domain_tag": "general_mixed",
+      "count": 20488,
+      "ai_ratio_pct": 94.26
+    },
+    {
+      "domain_tag": "news_general",
+      "count": 7024,
+      "ai_ratio_pct": 0.0
+    },
+    {
+      "domain_tag": "knowledge_general",
+      "count": 1900,
+      "ai_ratio_pct": 0.0
+    },
+    {
+      "domain_tag": "technology",
+      "count": 1186,
+      "ai_ratio_pct": 0.0
+    },
+    {
+      "domain_tag": "education",
+      "count": 855,
+      "ai_ratio_pct": 54.62
+    },
+    {
+      "domain_tag": "entertainment",
+      "count": 782,
+      "ai_ratio_pct": 30.31
+    },
+    {
+      "domain_tag": "finance",
+      "count": 474,
+      "ai_ratio_pct": 0.0
+    },
+    {
+      "domain_tag": "formal_public_docs",
+      "count": 300,
+      "ai_ratio_pct": 0.0
+    },
+    {
+      "domain_tag": "law",
+      "count": 37,
+      "ai_ratio_pct": 0.0
+    },
+    {
+      "domain_tag": "military",
+      "count": 16,
+      "ai_ratio_pct": 0.0
+    },
+    {
+      "domain_tag": "automotive",
+      "count": 5,
+      "ai_ratio_pct": 0.0
+    },
+    {
+      "domain_tag": "agriculture",
+      "count": 2,
+      "ai_ratio_pct": 0.0
+    }
+  ],
+  "notes": [
+    "text_type/domain_tag are source-based inferred tags (not original dataset columns)."
+  ]
+}

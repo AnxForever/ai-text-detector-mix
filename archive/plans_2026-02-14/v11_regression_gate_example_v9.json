@@ -1,0 +1,64 @@
+{
+  "generated_at": "2026-02-12 19:24:01",
+  "baseline_json": "models\\bert_v10_augmented\\eval_comparison.json",
+  "candidate_json": "models\\bert_v10_augmented\\eval_comparison.json",
+  "baseline_model_key": "bert_v10_augmented",
+  "candidate_model_key": "bert_v9_p0_supplement",
+  "gate": {
+    "baseline_three_set_avg": 98.36,
+    "candidate_three_set_avg": 97.31,
+    "three_set_avg_delta": -1.05,
+    "three_set_avg_degradation": 1.05,
+    "max_three_set_degradation": 0.5,
+    "pass_gate": false,
+    "decision": "rollback_to_baseline",
+    "reason": "three_set_avg degradation 1.0500 > threshold 0.5000",
+    "dataset_deltas": [
+      {
+        "dataset": "core_v1_test_clean",
+        "accuracy_baseline": 98.35,
+        "accuracy_candidate": 98.35,
+        "accuracy_delta": 0.0,
+        "precision_baseline": 98.47,
+        "precision_candidate": 98.47,
+        "precision_delta": 0.0,
+        "recall_baseline": 98.77,
+        "recall_candidate": 98.77,
+        "recall_delta": 0.0,
+        "f1_baseline": 98.62,
+        "f1_candidate": 98.62,
+        "f1_delta": 0.0
+      },
+      {
+        "dataset": "independent_data",
+        "accuracy_baseline": 97.69,
+        "accuracy_candidate": 94.73,
+        "accuracy_delta": -2.96,
+        "precision_baseline": 89.09,
+        "precision_candidate": 78.65,
+        "precision_delta": -10.44,
+        "recall_baseline": 98.0,
+        "recall_candidate": 93.33,
+        "recall_delta": -4.67,
+        "f1_baseline": 93.33,
+        "f1_candidate": 85.37,
+        "f1_delta": -7.96
+      },
+      {
+        "dataset": "merged_v2_val_clean",
+        "accuracy_baseline": 99.04,
+        "accuracy_candidate": 98.86,
+        "accuracy_delta": -0.18,
+        "precision_baseline": 98.26,
+        "precision_candidate": 97.51,
+        "precision_delta": -0.75,
+        "recall_baseline": 99.61,
+        "recall_candidate": 100.0,
+        "recall_delta": 0.39,
+        "f1_baseline": 98.93,
+        "f1_candidate": 98.74,
+        "f1_delta": -0.19
+      }
+    ]
+  }
+}

@@ -1,0 +1,165 @@
+{
+  "experiment": "A/B Comparison - Base Model Inheritance Effect",
+  "date": "2026-01-30",
+  "hypothesis": "If fresh model improves on problem cases, base model inheritance is the issue. If not, data distribution is the issue.",
+  "models": {
+    "V3 (继承 with_sep)": {
+      "model": "V3 (继承 with_sep)",
+      "accuracy": "5/10 (50.0%)",
+      "formal_human_correct": 3,
+      "casual_ai_correct": 0,
+      "formal_ai_correct": 2,
+      "details": [
+        {
+          "desc": "正式通知",
+          "true": "Human",
+          "pred": "AI",
+          "confidence": 100.0,
+          "correct": false
+        },
+        {
+          "desc": "紧急通知",
+          "true": "Human",
+          "pred": "AI",
+          "confidence": 99.5,
+          "correct": false
+        },
+        {
+          "desc": "正面评价",
+          "true": "Human",
+          "pred": "Human",
+          "confidence": 100.0,
+          "correct": true
+        },
+        {
+          "desc": "日常分享",
+          "true": "Human",
+          "pred": "AI",
+          "confidence": 100.0,
+          "correct": false
+        },
+        {
+          "desc": "简短确认",
+          "true": "Human",
+          "pred": "Human",
+          "confidence": 100.0,
+          "correct": true
+        },
+        {
+          "desc": "生活分享",
+          "true": "Human",
+          "pred": "Human",
+          "confidence": 100.0,
+          "correct": true
+        },
+        {
+          "desc": "口语化AI",
+          "true": "AI",
+          "pred": "Human",
+          "confidence": 100.0,
+          "correct": false
+        },
+        {
+          "desc": "犹豫式AI",
+          "true": "AI",
+          "pred": "Human",
+          "confidence": 100.0,
+          "correct": false
+        },
+        {
+          "desc": "正式AI",
+          "true": "AI",
+          "pred": "AI",
+          "confidence": 100.0,
+          "correct": true
+        },
+        {
+          "desc": "学术AI",
+          "true": "AI",
+          "pred": "AI",
+          "confidence": 100.0,
+          "correct": true
+        }
+      ]
+    },
+    "Fresh (bert-base-chinese)": {
+      "model": "Fresh (bert-base-chinese)",
+      "accuracy": "4/10 (40.0%)",
+      "formal_human_correct": 2,
+      "casual_ai_correct": 0,
+      "formal_ai_correct": 2,
+      "details": [
+        {
+          "desc": "正式通知",
+          "true": "Human",
+          "pred": "AI",
+          "confidence": 95.0,
+          "correct": false
+        },
+        {
+          "desc": "紧急通知",
+          "true": "Human",
+          "pred": "AI",
+          "confidence": 56.2,
+          "correct": false
+        },
+        {
+          "desc": "正面评价",
+          "true": "Human",
+          "pred": "AI",
+          "confidence": 85.2,
+          "correct": false
+        },
+        {
+          "desc": "日常分享",
+          "true": "Human",
+          "pred": "AI",
+          "confidence": 99.1,
+          "correct": false
+        },
+        {
+          "desc": "简短确认",
+          "true": "Human",
+          "pred": "Human",
+          "confidence": 97.7,
+          "correct": true
+        },
+        {
+          "desc": "生活分享",
+          "true": "Human",
+          "pred": "Human",
+          "confidence": 62.9,
+          "correct": true
+        },
+        {
+          "desc": "口语化AI",
+          "true": "AI",
+          "pred": "Human",
+          "confidence": 99.7,
+          "correct": false
+        },
+        {
+          "desc": "犹豫式AI",
+          "true": "AI",
+          "pred": "Human",
+          "confidence": 97.5,
+          "correct": false
+        },
+        {
+          "desc": "正式AI",
+          "true": "AI",
+          "pred": "AI",
+          "confidence": 99.5,
+          "correct": true
+        },
+        {
+          "desc": "学术AI",
+          "true": "AI",
+          "pred": "AI",
+          "confidence": 99.9,
+          "correct": true
+        }
+      ]
+    }
+  }
+}

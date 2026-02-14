@@ -1,0 +1,468 @@
+{
+  "core_v1_test_clean": {
+    "v10_accuracy": 98.35,
+    "v11c_accuracy": 97.98,
+    "new_errors": 3,
+    "fixed_errors": 1,
+    "both_wrong": 8,
+    "net_change": -2,
+    "new_error_details": [
+      {
+        "index": 20,
+        "length": 2151,
+        "bin": "512+",
+        "label": "Human",
+        "v11c_pred": "AI",
+        "v11c_conf": 0.5458,
+        "v10_conf": 0.678,
+        "source": "thucnews",
+        "text_preview": "圣诞节快到了，许多人都问我，印度人过不过圣诞节呢，印度的圣诞节热闹不？我回答他们，印度人不喜欢过圣诞节，那里的圣诞节也不热门。这是为什么呢？第一个原因是印度居民里绝大多数是佛教徒或穆斯林，这些宗教的信"
+      },
+      {
+        "index": 159,
+        "length": 192,
+        "bin": "128-256",
+        "label": "Human",
+        "v11c_pred": "AI",
+        "v11c_conf": 0.9437,
+        "v10_conf": 0.9766,
+        "source": "hc3_human",
+        "text_preview": "对一个有向无环图(Directed Acyclic Graph简称DAG)G进行拓扑排序，是将G中所有顶点排成一个线性序列，使得图中任意一对顶点u和v，若边<u,v>∈E(G)，则u在线性序列中出现在"
+      },
+      {
+        "index": 234,
+        "length": 151,
+        "bin": "128-256",
+        "label": "Human",
+        "v11c_pred": "AI",
+        "v11c_conf": 0.9702,
+        "v10_conf": 0.9706,
+        "source": "hc3_human",
+        "text_preview": "检索性业务是根据用户的需要向用户提供存储在信息中心供公众使用的信道。用户可以接入这一信息源，但不能决定信息流的分配是在哪一个时刻开始，也就是说，用户自己不能控制广播信息的起始时间和顺序。这种业务最常见"
+      }
+    ],
+    "fixed_error_details": [
+      {
+        "index": 498,
+        "length": 1444,
+        "bin": "512+",
+        "label": "Human",
+        "v11c_pred": "Human",
+        "v11c_conf": 0.9701,
+        "v10_conf": 0.5097,
+        "source": "thucnews",
+        "text_preview": "11月21日上午，由北京市汉语国际推广中心主办，北京汉语网承办的“2010北京高校外国留学生汉语辩论赛”决赛在北京语言大学逸夫报告厅成功落下帷幕。北京市汉语国际推广中心在2009年成功举办第一届北京高"
+      }
+    ],
+    "length_bins": [
+      {
+        "bin": "0-64",
+        "count": 15,
+        "v10_acc": 100.0,
+        "v11c_acc": 100.0,
+        "delta": 0.0
+      },
+      {
+        "bin": "64-128",
+        "count": 104,
+        "v10_acc": 99.04,
+        "v11c_acc": 99.04,
+        "delta": 0.0
+      },
+      {
+        "bin": "128-256",
+        "count": 96,
+        "v10_acc": 100.0,
+        "v11c_acc": 97.92,
+        "delta": -2.08
+      },
+      {
+        "bin": "256-512",
+        "count": 91,
+        "v10_acc": 97.8,
+        "v11c_acc": 97.8,
+        "delta": 0.0
+      },
+      {
+        "bin": "512+",
+        "count": 239,
+        "v10_acc": 97.49,
+        "v11c_acc": 97.49,
+        "delta": 0.0
+      }
+    ]
+  },
+  "independent_data": {
+    "v10_accuracy": 97.69,
+    "v11c_accuracy": 98.57,
+    "new_errors": 4,
+    "fixed_errors": 12,
+    "both_wrong": 9,
+    "net_change": 8,
+    "new_error_details": [
+      {
+        "index": 174,
+        "length": 162,
+        "bin": "128-256",
+        "label": "Human",
+        "v11c_pred": "AI",
+        "v11c_conf": 0.7902,
+        "v10_conf": 0.9681,
+        "source": "学术摘要-流行病学",
+        "text_preview": "本研究旨在分析青少年近视发生的相关危险因素。采用多阶段分层整群抽样方法，对北京市5所中学2000名学生进行问卷调查和视力检查。Logistic回归分析结果显示，每日户外活动时间少于1小时、每日电子屏幕"
+      },
+      {
+        "index": 275,
+        "length": 102,
+        "bin": "64-128",
+        "label": "Human",
+        "v11c_pred": "AI",
+        "v11c_conf": 0.936,
+        "v10_conf": 0.9724,
+        "source": "formal_collected",
+        "text_preview": "但丁故居位于佛罗伦萨古城中心，是一座设有中世纪塔楼的房屋，1911年辟为博物馆。“这就是一个中世纪骑士贵族的居所吗？要不是墙壁上镶着一尊落满尘埃的半身塑像和塑像下的标牌提醒，很难让人相信这就是但丁的故"
+      },
+      {
+        "index": 358,
+        "length": 97,
+        "bin": "64-128",
+        "label": "Human",
+        "v11c_pred": "AI",
+        "v11c_conf": 0.8765,
+        "v10_conf": 0.6703,
+        "source": "formal_collected",
+        "text_preview": "12月5日下午，在南阳通往社旗县的一辆大巴车上，22岁女孩刘乐（化名）在车上遭遇一男子猥亵。在女孩反抗并向大巴车司机求救并要求其报警时，该司机没有及时施救，造成女孩被犯罪嫌疑人拖下车，遭遇殴打。"
+      },
+      {
+        "index": 803,
+        "length": 155,
+        "bin": "128-256",
+        "label": "AI",
+        "v11c_pred": "Human",
+        "v11c_conf": 0.6102,
+        "v10_conf": 0.9762,
+        "source": "real_ai_gemini-3-pro-preview-search",
+        "text_preview": "这就跟“朝令夕改”没区别，对方一周内调整了三次口径，确实让人很难办。特别是关于15号提到的30%补贴门槛，今天居然又说要重新核算，这种高频变动完全没法作为执行依据。建议暂时按兵不动，以官网最终发布的盖"
+      }
+    ],
+    "fixed_error_details": [
+      {
+        "index": 198,
+        "length": 107,
+        "bin": "64-128",
+        "label": "Human",
+        "v11c_pred": "Human",
+        "v11c_conf": 0.9457,
+        "v10_conf": 0.9165,
+        "source": "formal_collected",
+        "text_preview": "昨日上午，“云暖鲁甸”爱心款全部发放完毕。村民们仔细计划着如何用这些钱——寒冬里，为了守孝和照顾家人，更多的青壮劳力不得不守在家中，无法到远方挣钱养家，而政府发放的每日15元补助仅够糊口。未来，他们既"
+      },
+      {
+        "index": 207,
+        "length": 111,
+        "bin": "64-128",
+        "label": "Human",
+        "v11c_pred": "Human",
+        "v11c_conf": 0.7967,
+        "v10_conf": 0.8468,
+        "source": "formal_collected",
+        "text_preview": "据专家测算，延迟退休可大幅提高养老金支付能力。在过去6年中，参保人延迟1年退休可减少养老金支出490亿元，增加缴费230亿元，一减一增相当于多收入720亿。推迟5年退休就能增加3600亿元，足够支付2"
+      },
+      {
+        "index": 217,
+        "length": 122,
+        "bin": "64-128",
+        "label": "Human",
+        "v11c_pred": "Human",
+        "v11c_conf": 0.8726,
+        "v10_conf": 0.9216,
+        "source": "formal_collected",
+        "text_preview": "腾讯在I'MQQ官网网站首页上线了《中国区域QQ同时在线分布》，实时提供QQ同时在线人数和分布。这个实时动态页面中，QQ在线者闪光并不断变化。页面显示，QQ历史最高在线人数超1.67亿。点击图片左下角"
+      },
+      {
+        "index": 250,
+        "length": 107,
+        "bin": "64-128",
+        "label": "Human",
+        "v11c_pred": "Human",
+        "v11c_conf": 0.9153,
+        "v10_conf": 0.9658,
+        "source": "formal_collected",
+        "text_preview": "尽管中央三令五申加强公车管理，但因缺乏有效的监督办法，公车私用仍难刹车，由此带来的浪费腐败更触目惊心。前不久，一位北京小学生提出给公车上红牌的建议，获得一些专家认可：“如果公车有了明显标识，还有多少人"
+      },
+      {
+        "index": 262,
+        "length": 112,
+        "bin": "64-128",
+        "label": "Human",
+        "v11c_pred": "Human",
+        "v11c_conf": 0.7457,
+        "v10_conf": 0.7776,
+        "source": "formal_collected",
+        "text_preview": "亚马逊和苹果上周双双发布新一季财报。按当前业绩测算，苹果的动态市盈率仅为13.06倍，而亚马逊的市盈率达到2766.93倍。换句话说，苹果投资人当前需要13年收回初期投资，亚马逊投资人则需要花费近30"
+      },
+      {
+        "index": 265,
+        "length": 99,
+        "bin": "64-128",
+        "label": "Human",
+        "v11c_pred": "Human",
+        "v11c_conf": 0.9344,
+        "v10_conf": 0.9612,
+        "source": "formal_collected",
+        "text_preview": "拖延似乎是大多数人觉得自己有商业计划，但是并没有执行的最好的理由。有了互联网和一些初始的帮助，你可以测试和验证你的商业计划——只需要不到48小时时间。比起你未来要花费的，这可以说是你花费的最小时间。"
+      },
+      {
+        "index": 269,
+        "length": 101,
+        "bin": "64-128",
+        "label": "Human",
+        "v11c_pred": "Human",
+        "v11c_conf": 0.8703,
+        "v10_conf": 0.9618,
+        "source": "formal_collected",
+        "text_preview": "为什么捷克斯洛伐克会在1992年分裂？本文旨在对这个问题进行解答：天鹅绒革命前苏式“族群联邦制”的实践给捷克斯洛伐克造成巨大的负面影响，是导致革命后捷克斯洛伐克国家模式不能发挥作用、最终解体的重要原因"
+      },
+      {
+        "index": 325,
+        "length": 101,
+        "bin": "64-128",
+        "label": "Human",
+        "v11c_pred": "Human",
+        "v11c_conf": 0.8285,
+        "v10_conf": 0.9027,
+        "source": "formal_collected",
+        "text_preview": "因筹不到钱买狗粮，深圳福田爱护动物协会面临倒闭。若无人接手，该组织收养的250多条流浪狗，将被集体人道毁灭。多年来，城市管理者不停送进狗只，却鲜见资金帮扶，犬只领养率也不足一成。目前，狗场存粮仅剩8天"
+      },
+      {
+        "index": 348,
+        "length": 100,
+        "bin": "64-128",
+        "label": "Human",
+        "v11c_pred": "Human",
+        "v11c_conf": 0.7394,
+        "v10_conf": 0.8174,
+        "source": "formal_collected",
+        "text_preview": "核电重启进入关键节点，任何风吹草动都能引起市场的躁动。一则中科院讨论核电重启的传闻，引得核电板块连续上涨三天。然而，知情人士告诉中国证券报记者，确切消息是，中国工程院29日召开了核能研究课题组研讨会。"
+      },
+      {
+        "index": 357,
+        "length": 95,
+        "bin": "64-128",
+        "label": "Human",
+        "v11c_pred": "Human",
+        "v11c_conf": 0.9702,
+        "v10_conf": 0.8189,
+        "source": "formal_collected",
+        "text_preview": "上海拿出3000张车牌，专门提供给购买特斯拉ModelS及其他进口纯电动车的消费者。目前，每张沪牌的拍卖价格已超过人民币8万元。这意味着购买了ModelS的消费者仅车牌方面就将获得高额优惠。"
+      },
+      {
+        "index": 761,
+        "length": 429,
+        "bin": "256-512",
+        "label": "AI",
+        "v11c_pred": "AI",
+        "v11c_conf": 0.9773,
+        "v10_conf": 0.9671,
+        "source": "real_ai_llama-3.1-405b-instruct",
+        "text_preview": "自动化部署使用说明  适用人群：具备基本计算机知识和操作技能的用户。不适用人群：完全没有计算机基础知识的用户。  FAQ：  Q：什么是自动化部署？ A：自动化部署是指通过脚本或软件工具实现自动化安装"
+      },
+      {
+        "index": 882,
+        "length": 243,
+        "bin": "128-256",
+        "label": "AI",
+        "v11c_pred": "AI",
+        "v11c_conf": 0.976,
+        "v10_conf": 0.9511,
+        "source": "real_ai_m4_chatgpt",
+        "text_preview": "2015年4月27日格力电器推出的分红方案可以说是创造了中国股市历史上的分红记录。这个方案可以称之为“史上最牛分红方案”，因为它包括了10转10的送股和10元的现金分红，相当于每10股的股东可以获得2"
+      }
+    ],
+    "length_bins": [
+      {
+        "bin": "0-64",
+        "count": 384,
+        "v10_acc": 100.0,
+        "v11c_acc": 100.0,
+        "delta": 0.0
+      },
+      {
+        "bin": "64-128",
+        "count": 208,
+        "v10_acc": 92.79,
+        "v11c_acc": 96.63,
+        "delta": 3.85
+      },
+      {
+        "bin": "128-256",
+        "count": 88,
+        "v10_acc": 97.73,
+        "v11c_acc": 96.59,
+        "delta": -1.14
+      },
+      {
+        "bin": "256-512",
+        "count": 103,
+        "v10_acc": 96.12,
+        "v11c_acc": 97.09,
+        "delta": 0.97
+      },
+      {
+        "bin": "512+",
+        "count": 127,
+        "v10_acc": 100.0,
+        "v11c_acc": 100.0,
+        "delta": 0.0
+      }
+    ]
+  },
+  "merged_v2_val_clean": {
+    "v10_accuracy": 99.04,
+    "v11c_accuracy": 99.13,
+    "new_errors": 4,
+    "fixed_errors": 5,
+    "both_wrong": 6,
+    "net_change": 1,
+    "new_error_details": [
+      {
+        "index": 250,
+        "length": 748,
+        "bin": "512+",
+        "label": "Human",
+        "v11c_pred": "AI",
+        "v11c_conf": 0.9681,
+        "v10_conf": 0.9642,
+        "source": "thucnews",
+        "text_preview": "新浪体育讯　北京时间12月28日消息，弗朗西斯确认和北京首钢解约，这让球队已经开始着手寻找新的外援了。据球队的总经理袁超透露，现在已经有很多经纪人都把球员的资料递交给了首钢俱乐部，这其中并不缺乏此前曾"
+      },
+      {
+        "index": 665,
+        "length": 100,
+        "bin": "64-128",
+        "label": "Human",
+        "v11c_pred": "AI",
+        "v11c_conf": 0.9749,
+        "v10_conf": 0.9696,
+        "source": "hc3_human",
+        "text_preview": "系统分区(System Partion)是Windows操作系统里常用的术语，主要指的是用于启动Windows的分区，通常该分区的根目录下，包含操作系统的启动文件（如boot.ini、ntldr等）。"
+      },
+      {
+        "index": 748,
+        "length": 616,
+        "bin": "512+",
+        "label": "Human",
+        "v11c_pred": "AI",
+        "v11c_conf": 0.7638,
+        "v10_conf": 0.8626,
+        "source": "thucnews",
+        "text_preview": "⊙记者 王宙洁尽管日本地震给全球金融市场带来的动荡令投资者不安，但这未能阻止部分经济体加快采取紧缩政策的步伐。印度央行17日宣布，为了对抗物价上涨压力，将该国基准利率上调25个基点。印度央行17日称，"
+      },
+      {
+        "index": 926,
+        "length": 162,
+        "bin": "128-256",
+        "label": "Human",
+        "v11c_pred": "AI",
+        "v11c_conf": 0.7902,
+        "v10_conf": 0.9681,
+        "source": "学术摘要-流行病学",
+        "text_preview": "本研究旨在分析青少年近视发生的相关危险因素。采用多阶段分层整群抽样方法，对北京市5所中学2000名学生进行问卷调查和视力检查。Logistic回归分析结果显示，每日户外活动时间少于1小时、每日电子屏幕"
+      }
+    ],
+    "fixed_error_details": [
+      {
+        "index": 175,
+        "length": 420,
+        "bin": "256-512",
+        "label": "Human",
+        "v11c_pred": "Human",
+        "v11c_conf": 0.9304,
+        "v10_conf": 0.7278,
+        "source": "thucnews",
+        "text_preview": "中新网北京3月17日电 (记者 余湛奕)朝鲜内阁总理金英日17日上午抵达北京，开始对中国进行为期5天的正式友好访问并出席中朝友好年开幕式。据悉，金英日抵京后将随即转赴山东，与山东省有关负责人会见，还将"
+      },
+      {
+        "index": 329,
+        "length": 526,
+        "bin": "512+",
+        "label": "AI",
+        "v11c_pred": "AI",
+        "v11c_conf": 0.9684,
+        "v10_conf": 0.974,
+        "source": "nan",
+        "text_preview": "新华网北京9月12日电（记者姚润丰）针对严峻的台风防御形势，国家防汛抗旱总指挥部两次发出通知，要求相关地区高度重视防御工作，密切关注台风动向，加强预报和预警，及时启动应急预案，切实做好出海船只回港避风"
+      },
+      {
+        "index": 348,
+        "length": 1854,
+        "bin": "512+",
+        "label": "AI",
+        "v11c_pred": "AI",
+        "v11c_conf": 0.969,
+        "v10_conf": 0.517,
+        "source": "parallel_claude-sonnet-4-5",
+        "text_preview": "智能家居里的秘密  清晨六点，李婉芝像往常一样被智能音箱的闹钟唤醒。她睁开眼睛，第一件事就是用手机关闭卧室里的监控摄像头。这个习惯已经保持了三年，自从她发现那些冰冷的电子眼睛会记录下家里的一切，包括她"
+      },
+      {
+        "index": 433,
+        "length": 327,
+        "bin": "256-512",
+        "label": "Human",
+        "v11c_pred": "Human",
+        "v11c_conf": 0.963,
+        "v10_conf": 0.8402,
+        "source": "thucnews",
+        "text_preview": "EA近日更新官方网站，发布了赛车新作《极品飞车13：变速》（Need for Speed: Shift）的首段漂移视频。这部视频由世界冠军漂移车手Vaughn Gittin, Jr.负责讲解，Vaug"
+      },
+      {
+        "index": 713,
+        "length": 508,
+        "bin": "256-512",
+        "label": "Human",
+        "v11c_pred": "Human",
+        "v11c_conf": 0.8786,
+        "v10_conf": 0.8616,
+        "source": "hc3_human",
+        "text_preview": "心理咨询是需要签协议的， 心理咨询协议书——为了更好地开展心理咨询工作，建立良好的咨访关系，保护双方的权利和福祉，来访者与心理咨询师均需遵守如下条款： 第五部分： 关于危机状态当人们处于非常痛苦、抑郁"
+      }
+    ],
+    "length_bins": [
+      {
+        "bin": "0-64",
+        "count": 190,
+        "v10_acc": 100.0,
+        "v11c_acc": 100.0,
+        "delta": 0.0
+      },
+      {
+        "bin": "64-128",
+        "count": 128,
+        "v10_acc": 97.66,
+        "v11c_acc": 96.88,
+        "delta": -0.78
+      },
+      {
+        "bin": "128-256",
+        "count": 219,
+        "v10_acc": 99.54,
+        "v11c_acc": 99.09,
+        "delta": -0.46
+      },
+      {
+        "bin": "256-512",
+        "count": 168,
+        "v10_acc": 97.02,
+        "v11c_acc": 98.81,
+        "delta": 1.79
+      },
+      {
+        "bin": "512+",
+        "count": 439,
+        "v10_acc": 99.54,
+        "v11c_acc": 99.54,
+        "delta": 0.0
+      }
+    ]
+  }
+}

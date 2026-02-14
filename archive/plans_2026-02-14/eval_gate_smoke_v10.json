@@ -1,0 +1,145 @@
+{
+  "bert_v10_augmented": {
+    "model": "bert_v10_augmented",
+    "core_v1_test_clean": {
+      "accuracy": 98.35,
+      "precision": 98.47,
+      "recall": 98.77,
+      "f1": 98.62,
+      "samples": 545,
+      "time_sec": 11.4
+    },
+    "independent_data": {
+      "accuracy": 97.69,
+      "precision": 89.09,
+      "recall": 98.0,
+      "f1": 93.33,
+      "samples": 910,
+      "time_sec": 14.6
+    },
+    "independent_data_by_source": {
+      "Review_ChnSentiCorp_htl_all": {
+        "accuracy": 100.0,
+        "count": 2
+      },
+      "Review_waimai_10k": {
+        "accuracy": 100.0,
+        "count": 2
+      },
+      "Toutiao_News": {
+        "accuracy": 100.0,
+        "count": 221
+      },
+      "Toutiao_news_agriculture": {
+        "accuracy": 100.0,
+        "count": 1
+      },
+      "Toutiao_news_car": {
+        "accuracy": 100.0,
+        "count": 1
+      },
+      "Toutiao_news_edu": {
+        "accuracy": 100.0,
+        "count": 38
+      },
+      "Toutiao_news_finance": {
+        "accuracy": 100.0,
+        "count": 49
+      },
+      "Toutiao_news_military": {
+        "accuracy": 100.0,
+        "count": 2
+      },
+      "Toutiao_news_tech": {
+        "accuracy": 100.0,
+        "count": 69
+      },
+      "Wikipedia_CN": {
+        "accuracy": 99.16,
+        "count": 119
+      },
+      "external_m4_qazh": {
+        "accuracy": 95.92,
+        "count": 49
+      },
+      "external_vcsum": {
+        "accuracy": 100.0,
+        "count": 2
+      },
+      "formal_collected": {
+        "accuracy": 92.5,
+        "count": 200
+      },
+      "real_ai_deepseek-v3.2": {
+        "accuracy": 100.0,
+        "count": 8
+      },
+      "real_ai_gemini-3-flash-preview": {
+        "accuracy": 100.0,
+        "count": 16
+      },
+      "real_ai_gemini-3-pro-preview": {
+        "accuracy": 100.0,
+        "count": 24
+      },
+      "real_ai_gemini-3-pro-preview-search": {
+        "accuracy": 100.0,
+        "count": 8
+      },
+      "real_ai_glm-4.7": {
+        "accuracy": 100.0,
+        "count": 9
+      },
+      "real_ai_gpt-4": {
+        "accuracy": 100.0,
+        "count": 10
+      },
+      "real_ai_gpt-5": {
+        "accuracy": 100.0,
+        "count": 8
+      },
+      "real_ai_gpt-oss-120b": {
+        "accuracy": 100.0,
+        "count": 8
+      },
+      "real_ai_llama-3.1-405b-instruct": {
+        "accuracy": 88.89,
+        "count": 9
+      },
+      "real_ai_m4_chatgpt": {
+        "accuracy": 96.0,
+        "count": 50
+      },
+      "学术摘要-5": {
+        "accuracy": 100.0,
+        "count": 1
+      },
+      "学术摘要-流行病学": {
+        "accuracy": 100.0,
+        "count": 1
+      },
+      "学生资助中心通知-勤工": {
+        "accuracy": 100.0,
+        "count": 1
+      },
+      "新华社新闻-1": {
+        "accuracy": 100.0,
+        "count": 1
+      },
+      "新华社新闻-6": {
+        "accuracy": 100.0,
+        "count": 1
+      }
+    },
+    "independent_data_errors": 21,
+    "merged_v2_val_clean": {
+      "accuracy": 99.04,
+      "precision": 98.26,
+      "recall": 99.61,
+      "f1": 98.93,
+      "samples": 1144,
+      "time_sec": 21.5
+    },
+    "three_set_avg": 98.36
+  }
+}

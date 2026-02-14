@@ -1,0 +1,68 @@
+{
+  "model": "bert_v11c_boundary_fix",
+  "dataset": "datasets\\eval\\custom\\v11c_strength_probe_2026-02-13.csv",
+  "overall": {
+    "samples": 1199,
+    "accuracy": 84.65,
+    "precision": 80.29,
+    "recall": 91.82,
+    "f1": 85.67,
+    "fn": 49,
+    "fp": 135
+  },
+  "by_source_type": {
+    "news_article": {
+      "count": 300,
+      "accuracy": 56.33,
+      "fn": 0,
+      "fp": 131,
+      "avg_prob_ai": 0.4399
+    },
+    "qa": {
+      "count": 299,
+      "accuracy": 84.62,
+      "fn": 46,
+      "fp": 0,
+      "avg_prob_ai": 0.8332
+    },
+    "qa_answer": {
+      "count": 600,
+      "accuracy": 98.83,
+      "fn": 3,
+      "fp": 4,
+      "avg_prob_ai": 0.5024
+    }
+  },
+  "by_length_bucket": {
+    "0-64": {
+      "count": 44,
+      "accuracy": 100.0,
+      "fn": 0,
+      "fp": 0
+    },
+    "64-128": {
+      "count": 329,
+      "accuracy": 82.98,
+      "fn": 18,
+      "fp": 38
+    },
+    "128-256": {
+      "count": 590,
+      "accuracy": 80.17,
+      "fn": 21,
+      "fp": 96
+    },
+    "256-512": {
+      "count": 213,
+      "accuracy": 94.84,
+      "fn": 10,
+      "fp": 1
+    },
+    "512+": {
+      "count": 23,
+      "accuracy": 100.0,
+      "fn": 0,
+      "fp": 0
+    }
+  }
+}

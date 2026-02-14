@@ -1,6 +1,6 @@
 ﻿# 计划文档索引
 
-> 更新时间: 2026-01-27
+> 更新时间: 2026-02-12
 > 用途: 统一管理数据构建/审计/评估/训练的执行计划与当前状态
 
 ## 文档列表
@@ -17,6 +17,11 @@
 - data_fill_pipeline_guide_2026-01-27.md - Data fill pipeline guide (dry-run)
 - data_fill_pipeline_targets_2026-01-27.json - Quota-aligned targets config
 - IMPROVEMENT_PLAN.md - 改进方案（V2）
+- risk_governance_workflow.md - 风险治理执行流程（V10->V11）
+- risk_governance_addendum_2026-02-12.md - 风险治理补充约束（A1/B2/C2/回滚）
+- claude_codex_sync_v11ab.md - Codex/Claude 协同执行清单（V11a/V11b）
+- v11_post_training_runbook.md - V11a/V11b 训练后评估与门禁运行手册
+- claude_handoff_boundary_fix_2026-02-13.md - THUCNews 512+ FP 边界修复交接
 - evaluation_result_template.md - 评估结果汇总模板
 - evaluation_result_2026-01-27.md - 当前评估汇总（占位）
 - data_evaluation_system_plan.md - 数据评价系统总计划

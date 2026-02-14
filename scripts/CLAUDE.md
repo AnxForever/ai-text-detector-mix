@@ -4,18 +4,19 @@
 
 ## 模块职责
 
-包含项目所有 Python 脚本，分为训练、评估、生成、数据清洗、演示和工具六大子模块。
+包含项目所有 Python 脚本，分为训练、评估、生成、数据清洗、分析、演示和工具七大子模块。
 
 ## 子模块概览
 
 | 子模块 | 职责 | 脚本数量 |
 |-------|------|---------|
-| `training/` | 模型训练 | 12 |
-| `evaluation/` | 模型评估 | 19 |
-| `generation/` | AI文本生成 | 29 |
-| `data_cleaning/` | 数据清洗处理 | 18 |
+| `training/` | 模型训练 | 29 |
+| `evaluation/` | 模型评估 | 32 |
+| `generation/` | AI文本生成 | 33 |
+| `data_cleaning/` | 数据清洗处理 | 31 |
+| `analysis/` | 风险审计与数据分析 | 4 |
 | `demo/` | 可视化演示 | 1 |
-| `utils/` | 工具函数 | 1 |
+| `utils/` | 工具函数 | 3 |
 
 ## 入口与启动
 
@@ -62,6 +63,22 @@ python scripts/data_cleaning/prepare_span_labels.py
 
 # 重建combined v2
 python scripts/data_cleaning/rebuild_combined_v2.py
+
+# 构建v11候选训练集（风险过滤）
+python scripts/data_cleaning/build_train_v11_candidate.py
+```
+
+### 风险治理脚本
+
+```bash
+# 生成风险仪表盘
+python scripts/analysis/generate_risk_dashboard.py
+
+# unknown样本分流（keep/review/drop）
+python scripts/analysis/triage_unknown_source.py
+
+# ???????????? >= 300 + ??????
+python scripts/analysis/plan_weak_domain_supplement.py
 ```
 
 ### 演示脚本
@@ -126,7 +143,7 @@ A: 确保在项目根目录运行脚本，并激活虚拟环境。
 A: 减小 `batch_size` 或使用 `--max_length 256`。
 
 **Q: 训练数据路径错误?**
-A: 检查 `datasets/active/core_v1/` 目录是否存在训练集文件。
+A: 检查 `datasets/active/core_v1/` 或 `datasets/merged_v2/` 是否存在所需文件。
 
 ## 相关文件清单
 
@@ -149,18 +166,29 @@ scripts/
 ├── data_cleaning/      # 数据清洗
 │   ├── add_sep_markers.py          # 添加SEP标记
 │   ├── prepare_span_labels.py      # Span标签准备
-│   └── merge_batch_data.py         # 数据合并
+│   ├── merge_batch_data.py         # 数据合并
+│   └── build_train_v11_candidate.py # v11候选集风险过滤构建
+├── analysis/           # 风险与数据审计
+│   ├── generate_risk_dashboard.py  # 风险仪表盘（长度/source/模板/重叠）
+│   └── triage_unknown_source.py    # unknown样本分流（keep/review/drop）
 ├── demo/               # 演示
 │   └── visualize_detection.py      # 可视化演示
 └── utils/              # 工具
-    └── api_config.py               # API配置加载
+    ├── api_config.py               # API配置加载
+    └── risk_patterns.py            # 风险规则模式
 ```
 
 ## 变更记录 (Changelog)
+
+### 2026-02-12
+- 更新子模块脚本数量统计
+- FAQ 增加 `merged_v2` 训练数据路径说明
+- 新增长期风险治理脚本（risk dashboard / unknown triage / v11 candidate）
+- Added weak-domain supplement planning script (min 300 + diversity constraints)
 
 ### 2026-01-28
 - 初始化模块文档
 
 ---
 
-*文档生成时间: 2026-01-28T12:42:53+0800*
+*文档更新时间: 2026-02-12*
