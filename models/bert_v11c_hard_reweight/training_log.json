@@ -1,0 +1,393 @@
+{
+  "version": "v11c_hard_reweight",
+  "strategy": "v11c_sampler_reweight_with_optional_loss_weight",
+  "description": "Reuse V11c training config and amplify hard subsets inferred from source tags. Default is sampler-only hard reweight.",
+  "base_model": "/home/anx4758/datacollection/models/bert_v11c_boundary_fix",
+  "config": {
+    "base_model": "/home/anx4758/datacollection/models/bert_v11c_boundary_fix",
+    "train_data": "/home/anx4758/datacollection/datasets/merged_v2/train_v11c_candidate.csv",
+    "val_data": "/home/anx4758/datacollection/datasets/merged_v2/val.csv",
+    "output": "models/bert_v11c_hard_reweight",
+    "batch_size": 8,
+    "max_length": 256,
+    "epochs": 5,
+    "learning_rate": 1e-05,
+    "label_smoothing": 0.05,
+    "length_penalty_weight": 0.1,
+    "accum_steps": 4,
+    "patience": 2,
+    "min_text_length": 10,
+    "max_text_length": 5000,
+    "max_train_rows": 0,
+    "max_val_rows": 0,
+    "hard_sampler_multiplier": 2.0,
+    "other_sampler_multiplier": 1.15,
+    "hard_loss_multiplier": 1.0,
+    "other_loss_multiplier": 1.0,
+    "seed": 42
+  },
+  "train_samples": 63113,
+  "val_samples": 7452,
+  "train_subset_summary": {
+    "subset_counts": {
+      "ai_easy": 21744,
+      "ai_hard": 9928,
+      "ai_other": 1072,
+      "human_easy": 22755,
+      "human_hard": 6225,
+      "human_other": 1389
+    },
+    "subset_by_label": [
+      {
+        "subset": "ai_easy",
+        "label": 1,
+        "count": 21744
+      },
+      {
+        "subset": "ai_hard",
+        "label": 1,
+        "count": 9928
+      },
+      {
+        "subset": "ai_other",
+        "label": 1,
+        "count": 1072
+      },
+      {
+        "subset": "human_easy",
+        "label": 0,
+        "count": 22755
+      },
+      {
+        "subset": "human_hard",
+        "label": 0,
+        "count": 6225
+      },
+      {
+        "subset": "human_other",
+        "label": 0,
+        "count": 1389
+      }
+    ],
+    "top_sources": {
+      "hc3_human": 14175,
+      "hc3_chatgpt": 12790,
+      "thucnews": 6930,
+      "Senior_qwen": 3198,
+      "Senior_deepseek": 3158,
+      "external_m4_qazh": 2662,
+      "Wikipedia_CN": 1863,
+      "parallel_gpt-4.1-mini": 1638,
+      "unknown": 1637,
+      "parallel_deepseek-v3.2": 924,
+      "parallel_Kimi-K2": 878,
+      "parallel_gemini-2.5-flash": 850,
+      "parallel_claude-haiku-4-5-20251001": 822,
+      "Toutiao_news_tech": 708,
+      "parallel_cursor2-gpt-5": 707,
+      "auto_custom": 639,
+      "auto_deepseek": 629,
+      "parallel_deepseek-v3.2-chat": 561,
+      "parallel_qwen-max-latest": 524,
+      "parallel_claude-sonnet-4-5": 497
+    },
+    "sampler_weight_stats": [
+      {
+        "subset": "ai_easy",
+        "count": 21744,
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      {
+        "subset": "ai_hard",
+        "count": 9928,
+        "mean": 2.0,
+        "min": 2.0,
+        "max": 2.0
+      },
+      {
+        "subset": "ai_other",
+        "count": 1072,
+        "mean": 1.15,
+        "min": 1.15,
+        "max": 1.15
+      },
+      {
+        "subset": "human_easy",
+        "count": 22755,
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      {
+        "subset": "human_hard",
+        "count": 6225,
+        "mean": 2.0,
+        "min": 2.0,
+        "max": 2.0
+      },
+      {
+        "subset": "human_other",
+        "count": 1389,
+        "mean": 1.15,
+        "min": 1.15,
+        "max": 1.15
+      }
+    ],
+    "loss_weight_stats": [
+      {
+        "subset": "ai_easy",
+        "count": 21744,
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      {
+        "subset": "ai_hard",
+        "count": 9928,
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      {
+        "subset": "ai_other",
+        "count": 1072,
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      {
+        "subset": "human_easy",
+        "count": 22755,
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      {
+        "subset": "human_hard",
+        "count": 6225,
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      {
+        "subset": "human_other",
+        "count": 1389,
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      }
+    ]
+  },
+  "val_subset_summary": {
+    "subset_counts": {
+      "ai_easy": 2440,
+      "ai_hard": 1097,
+      "ai_other": 421,
+      "human_easy": 2822,
+      "human_hard": 588,
+      "human_other": 84
+    },
+    "subset_by_label": [
+      {
+        "subset": "ai_easy",
+        "label": 1,
+        "count": 2440
+      },
+      {
+        "subset": "ai_hard",
+        "label": 1,
+        "count": 1097
+      },
+      {
+        "subset": "ai_other",
+        "label": 1,
+        "count": 421
+      },
+      {
+        "subset": "human_easy",
+        "label": 0,
+        "count": 2822
+      },
+      {
+        "subset": "human_hard",
+        "label": 0,
+        "count": 588
+      },
+      {
+        "subset": "human_other",
+        "label": 0,
+        "count": 84
+      }
+    ],
+    "top_sources": {
+      "hc3_human": 1718,
+      "hc3_chatgpt": 1614,
+      "thucnews": 916,
+      "unknown": 505,
+      "Senior_deepseek": 422,
+      "Senior_qwen": 404,
+      "external_m4_qazh": 303,
+      "Wikipedia_CN": 219,
+      "parallel_gpt-4.1-mini": 216,
+      "parallel_deepseek-v3.2": 115,
+      "parallel_gemini-2.5-flash": 111,
+      "parallel_claude-haiku-4-5-20251001": 106,
+      "parallel_Kimi-K2": 101,
+      "parallel_cursor2-gpt-5": 84,
+      "Toutiao_news_tech": 78,
+      "auto_deepseek": 75,
+      "parallel_deepseek-v3.2-chat": 70,
+      "auto_custom": 69,
+      "parallel_claude-sonnet-4-5": 59,
+      "parallel_qwen-max-latest": 59
+    },
+    "sampler_weight_stats": [
+      {
+        "subset": "ai_easy",
+        "count": 2440,
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      {
+        "subset": "ai_hard",
+        "count": 1097,
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      {
+        "subset": "ai_other",
+        "count": 421,
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      {
+        "subset": "human_easy",
+        "count": 2822,
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      {
+        "subset": "human_hard",
+        "count": 588,
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      {
+        "subset": "human_other",
+        "count": 84,
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      }
+    ],
+    "loss_weight_stats": [
+      {
+        "subset": "ai_easy",
+        "count": 2440,
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      {
+        "subset": "ai_hard",
+        "count": 1097,
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      {
+        "subset": "ai_other",
+        "count": 421,
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      {
+        "subset": "human_easy",
+        "count": 2822,
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      {
+        "subset": "human_hard",
+        "count": 588,
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      {
+        "subset": "human_other",
+        "count": 84,
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      }
+    ]
+  },
+  "best_val_acc": 0.9898,
+  "results": [
+    {
+      "epoch": 1,
+      "train_loss": 0.1096,
+      "train_acc": 0.9984,
+      "val_loss": 0.0762,
+      "val_acc": 0.9844,
+      "val_precision": 0.9774,
+      "val_recall": 0.9937,
+      "val_f1": 0.9855,
+      "time_sec": 1675.5
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.1084,
+      "train_acc": 0.9989,
+      "val_loss": 0.0743,
+      "val_acc": 0.9838,
+      "val_precision": 0.975,
+      "val_recall": 0.9949,
+      "val_f1": 0.9849,
+      "time_sec": 1650.6
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.1069,
+      "train_acc": 0.9995,
+      "val_loss": 0.0536,
+      "val_acc": 0.9898,
+      "val_precision": 0.9877,
+      "val_recall": 0.9932,
+      "val_f1": 0.9904,
+      "time_sec": 1643.7
+    },
+    {
+      "epoch": 4,
+      "train_loss": 0.1064,
+      "train_acc": 0.9996,
+      "val_loss": 0.0652,
+      "val_acc": 0.9864,
+      "val_precision": 0.9791,
+      "val_recall": 0.9957,
+      "val_f1": 0.9873,
+      "time_sec": 1654.6
+    },
+    {
+      "epoch": 5,
+      "train_loss": 0.1061,
+      "train_acc": 0.9998,
+      "val_loss": 0.0656,
+      "val_acc": 0.987,
+      "val_precision": 0.9799,
+      "val_recall": 0.996,
+      "val_f1": 0.9878,
+      "time_sec": 1652.8
+    }
+  ]
+}
