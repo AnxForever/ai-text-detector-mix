@@ -364,19 +364,18 @@ def detect_text(
     result_type = "mixed"
     boundary_char = None
 
-    threshold_percent = int(DECISION_THRESHOLD * 100)
-    if ai_percentage > threshold_percent:
+    if prob_ai >= DECISION_THRESHOLD:
         result_type = "ai"
-    elif human_percentage > threshold_percent:
+    elif prob_human >= DECISION_THRESHOLD:
         result_type = "human"
 
-    if result_type in ["ai", "mixed"] or label == "AI":
+    # Only attempt boundary detection when the text is confidently AI or
+    # at least leans AI. Do not force uncertain samples into AI/Human by argmax.
+    if result_type == "ai" or (result_type == "mixed" and prob_ai >= 0.5):
         boundary_res = detector.detect_boundary(text)
         if boundary_res["boundary_char"] is not None:
             boundary_char = int(boundary_res["boundary_char"])
             result_type = "mixed"
-        elif result_type == "mixed":
-            result_type = "ai" if prob_ai > prob_human else "human"
 
     final_sentences = split_sentences(text)
 
@@ -398,7 +397,7 @@ def detect_text(
             if boundary_sentence_index is not None:
                 is_ai = idx >= boundary_sentence_index
             else:
-                is_ai = ai_percentage > 50
+                is_ai = prob_ai >= DECISION_THRESHOLD
 
         sentence_results.append(
             SentenceResult(

@@ -72,12 +72,12 @@ def load_model(model_path, device='cuda'):
     return model, tokenizer
 
 
-def predict_text(text, model, tokenizer, device='cuda'):
+def predict_text(text, model, tokenizer, device='cuda', ai_threshold=0.8):
     """
     预测单个文本
 
     Returns:
-        prediction: 0=人类, 1=AI
+        prediction: 0=人类, 1=AI, -1=不确定
         confidence: 置信度 (0-1)
         probabilities: [人类概率, AI概率]
     """
@@ -103,15 +103,25 @@ def predict_text(text, model, tokenizer, device='cuda'):
         outputs = model(input_ids=input_ids, attention_mask=attention_mask)
         logits = outputs.logits
         probabilities = torch.softmax(logits, dim=1)[0]
-        prediction = torch.argmax(logits, dim=1).item()
-        confidence = probabilities[prediction].item()
+        prob_human = float(probabilities[0].item())
+        prob_ai = float(probabilities[1].item())
+
+        if prob_ai >= ai_threshold:
+            prediction = 1
+            confidence = prob_ai
+        elif prob_human >= ai_threshold:
+            prediction = 0
+            confidence = prob_human
+        else:
+            prediction = -1
+            confidence = max(prob_human, prob_ai)
 
     return prediction, confidence, probabilities.cpu().numpy()
 
 
-def format_result(text, prediction, confidence, probabilities):
+def format_result(text, prediction, confidence, probabilities, ai_threshold=0.8):
     """格式化输出结果"""
-    label_map = {0: "人类撰写", 1: "AI生成"}
+    label_map = {0: "人类撰写", 1: "AI生成", -1: "不确定"}
 
     print("\n" + "="*70)
     print("检测结果")
@@ -124,6 +134,7 @@ def format_result(text, prediction, confidence, probabilities):
     print(f"\n【预测结果】")
     print(f"判断: {label_map[prediction]}")
     print(f"置信度: {confidence*100:.2f}%")
+    print(f"AI判定阈值: {ai_threshold*100:.0f}%")
 
     print(f"\n【详细概率】")
     print(f"  人类撰写: {probabilities[0]*100:.2f}%")
@@ -143,7 +154,7 @@ def format_result(text, prediction, confidence, probabilities):
     print("="*70)
 
 
-def interactive_mode(model, tokenizer, device):
+def interactive_mode(model, tokenizer, device, ai_threshold):
     """交互模式：持续输入文本进行检测"""
     print("\n" + "="*70)
     print("交互检测模式")
@@ -180,14 +191,14 @@ def interactive_mode(model, tokenizer, device):
 
         # 预测
         prediction, confidence, probabilities = predict_text(
-            text, model, tokenizer, device
+            text, model, tokenizer, device, ai_threshold
         )
 
         # 显示结果
-        format_result(text, prediction, confidence, probabilities)
+        format_result(text, prediction, confidence, probabilities, ai_threshold)
 
 
-def batch_test_mode(texts, model, tokenizer, device):
+def batch_test_mode(texts, model, tokenizer, device, ai_threshold):
     """批量测试模式"""
     print("\n" + "="*70)
     print(f"批量检测模式 - 共 {len(texts)} 个文本")
@@ -199,7 +210,7 @@ def batch_test_mode(texts, model, tokenizer, device):
         print(f"\n[{i}/{len(texts)}] 检测中...")
 
         prediction, confidence, probabilities = predict_text(
-            text, model, tokenizer, device
+            text, model, tokenizer, device, ai_threshold
         )
 
         results.append({
@@ -209,7 +220,7 @@ def batch_test_mode(texts, model, tokenizer, device):
             'probabilities': probabilities
         })
 
-        format_result(text, prediction, confidence, probabilities)
+        format_result(text, prediction, confidence, probabilities, ai_threshold)
 
     # 汇总统计
     print("\n" + "="*70)
@@ -217,12 +228,14 @@ def batch_test_mode(texts, model, tokenizer, device):
     print("="*70)
 
     ai_count = sum(1 for r in results if r['prediction'] == 1)
-    human_count = len(results) - ai_count
+    human_count = sum(1 for r in results if r['prediction'] == 0)
+    uncertain_count = sum(1 for r in results if r['prediction'] == -1)
     avg_confidence = sum(r['confidence'] for r in results) / len(results)
 
     print(f"\n总数: {len(results)}")
     print(f"判断为AI生成: {ai_count} ({ai_count/len(results)*100:.1f}%)")
     print(f"判断为人类撰写: {human_count} ({human_count/len(results)*100:.1f}%)")
+    print(f"判断为不确定: {uncertain_count} ({uncertain_count/len(results)*100:.1f}%)")
     print(f"平均置信度: {avg_confidence*100:.2f}%")
 
 
@@ -237,6 +250,8 @@ def main():
     parser.add_argument('--device', type=str, default='cuda',
                        choices=['cuda', 'cpu'],
                        help='运行设备')
+    parser.add_argument('--ai-threshold', type=float, default=0.8,
+                       help='判定为AI的概率阈值，默认0.8')
     parser.add_argument('--text', type=str, default=None,
                        help='待检测的文本（单个）')
     parser.add_argument('--file', type=str, default=None,
@@ -268,14 +283,14 @@ def main():
     # 根据不同模式运行
     if args.interactive:
         # 交互模式
-        interactive_mode(model, tokenizer, args.device)
+        interactive_mode(model, tokenizer, args.device, args.ai_threshold)
 
     elif args.text:
         # 单文本模式
         prediction, confidence, probabilities = predict_text(
-            args.text, model, tokenizer, args.device
+            args.text, model, tokenizer, args.device, args.ai_threshold
         )
-        format_result(args.text, prediction, confidence, probabilities)
+        format_result(args.text, prediction, confidence, probabilities, args.ai_threshold)
 
     elif args.file:
         # 文件批量模式
@@ -287,7 +302,7 @@ def main():
                 print("❌ 文件为空或格式错误")
                 return
 
-            batch_test_mode(texts, model, tokenizer, args.device)
+            batch_test_mode(texts, model, tokenizer, args.device, args.ai_threshold)
 
         except Exception as e:
             print(f"❌ 文件读取失败: {e}")
@@ -296,7 +311,7 @@ def main():
     else:
         # 默认：交互模式
         print("\n未指定检测内容，启动交互模式")
-        interactive_mode(model, tokenizer, args.device)
+        interactive_mode(model, tokenizer, args.device, args.ai_threshold)
 
 
 if __name__ == "__main__":
