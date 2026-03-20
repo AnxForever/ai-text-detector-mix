@@ -2,21 +2,25 @@
 BERT AI文本检测模型训练脚本 - 改进版
 集成所有长度平衡改进策略
 """
+
+from __future__ import annotations
+
+import argparse
+import json
 import os
 import sys
-import json
-import argparse
+import warnings
+
+import pandas as pd
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader
-from transformers import BertForSequenceClassification, BertTokenizer, get_linear_schedule_with_warmup
+from sklearn.metrics import accuracy_score, classification_report, precision_recall_fscore_support
 from torch.optim import AdamW
-from sklearn.metrics import accuracy_score, precision_recall_fscore_support, classification_report
-import pandas as pd
-import numpy as np
+from torch.utils.data import DataLoader
 from tqdm import tqdm
-import warnings
-warnings.filterwarnings('ignore')
+from transformers import BertForSequenceClassification, BertTokenizer, get_linear_schedule_with_warmup
+
+warnings.filterwarnings("ignore")
 
 # 添加项目根目录到路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
@@ -28,18 +32,18 @@ from scripts.training.length_weighted_loss import LengthWeightedLoss
 class BERTTrainer:
     def __init__(
         self,
-        model_name='bert-base-chinese',
-        max_length=512,
-        batch_size=16,
-        learning_rate=2e-5,
-        num_epochs=5,
-        warmup_steps=500,
-        weight_decay=0.01,
-        use_length_weighted_loss=True,
-        loss_alpha=0.3,
-        device=None,
-        output_dir='models/bert_improved'
-    ):
+        model_name: str = 'bert-base-chinese',
+        max_length: int = 512,
+        batch_size: int = 16,
+        learning_rate: float = 2e-5,
+        num_epochs: int = 5,
+        warmup_steps: int = 500,
+        weight_decay: float = 0.01,
+        use_length_weighted_loss: bool = True,
+        loss_alpha: float = 0.3,
+        device: torch.device | None = None,
+        output_dir: str = 'models/bert_improved',
+    ) -> None:
         """
         初始化训练器
 
@@ -90,7 +94,7 @@ class BERTTrainer:
             'val_f1': []
         }
 
-    def _init_model(self):
+    def _init_model(self) -> None:
         """初始化模型和tokenizer"""
         print("\n正在加载BERT模型和tokenizer...")
         self.tokenizer = BertTokenizer.from_pretrained(self.model_name)
@@ -101,7 +105,7 @@ class BERTTrainer:
         self.model.to(self.device)
         print(f"✓ 模型加载成功: {self.model_name}")
 
-    def load_data(self, train_csv, val_csv, test_csv):
+    def load_data(self, train_csv: str, val_csv: str, test_csv: str) -> None:
         """加载数据集"""
         print("\n正在加载数据集...")
 
@@ -164,7 +168,7 @@ class BERTTrainer:
         print("✓ 数据加载完成")
         print(f"✓ 使用动态Padding策略（batch级别自适应）")
 
-    def _setup_optimizer(self):
+    def _setup_optimizer(self) -> None:
         """设置优化器和学习率调度器"""
         # 优化器
         self.optimizer = AdamW(
@@ -193,7 +197,7 @@ class BERTTrainer:
             self.criterion = nn.CrossEntropyLoss()
             print("✓ 使用标准交叉熵损失")
 
-    def train_epoch(self):
+    def train_epoch(self) -> tuple[float, float]:
         """训练一个epoch"""
         self.model.train()
         total_loss = 0
@@ -247,7 +251,7 @@ class BERTTrainer:
 
         return avg_loss, accuracy
 
-    def evaluate(self, data_loader):
+    def evaluate(self, data_loader: DataLoader) -> tuple[float, float, float, float, float]:
         """评估模型"""
         self.model.eval()
         total_loss = 0
@@ -293,8 +297,7 @@ class BERTTrainer:
 
         return avg_loss, accuracy, precision, recall, f1
 
-    def train(self):
-        """完整训练流程"""
+    def train(self) -> None:
         print("\n" + "="*70)
         print("开始训练")
         print("="*70)
@@ -336,8 +339,7 @@ class BERTTrainer:
         self.save_model('final_model')
         print("\n✓ 训练完成！")
 
-    def test(self):
-        """在测试集上评估"""
+    def test(self) -> dict[str, float]:
         print("\n" + "="*70)
         print("测试集评估")
         print("="*70)
@@ -401,7 +403,7 @@ class BERTTrainer:
 
         return test_results
 
-    def save_model(self, name='model'):
+    def save_model(self, name: str = 'model') -> None:
         """保存模型"""
         save_path = os.path.join(self.output_dir, name)
         os.makedirs(save_path, exist_ok=True)
@@ -430,7 +432,7 @@ class BERTTrainer:
         with open(os.path.join(save_path, 'training_config.json'), 'w', encoding='utf-8') as f:
             json.dump(config, f, indent=2, ensure_ascii=False)
 
-    def load_model(self, name='model'):
+    def load_model(self, name: str = 'model') -> None:
         """加载模型"""
         load_path = os.path.join(self.output_dir, name)
 
@@ -441,8 +443,7 @@ class BERTTrainer:
         print(f"✓ 模型已加载: {load_path}")
 
 
-def main():
-    """主函数"""
+def main() -> None:
     parser = argparse.ArgumentParser(description="Train BERT AI text detector")
     parser.add_argument("--model-name", default="bert-base-chinese",
                         help="Model name or path (e.g., models/bert_improved/best_model)")

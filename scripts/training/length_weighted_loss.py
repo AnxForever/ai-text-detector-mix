@@ -3,6 +3,8 @@
 给短文本更高的学习权重，防止模型过度依赖长度特征
 """
 
+from __future__ import annotations
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -23,14 +25,20 @@ class LengthWeightedLoss(nn.Module):
         reduction: 'mean', 'sum', 或 'none'
     """
 
-    def __init__(self, alpha=0.3, max_length=512, reduction='mean'):
+    def __init__(self, alpha: float = 0.3, max_length: int = 512, reduction: str = 'mean') -> None:
         super().__init__()
         self.alpha = alpha
         self.max_length = max_length
         self.reduction = reduction
         self.ce_loss = nn.CrossEntropyLoss(reduction='none')
 
-    def forward(self, logits, labels, lengths=None, attention_masks=None):
+    def forward(
+        self,
+        logits: torch.Tensor,
+        labels: torch.Tensor,
+        lengths: torch.Tensor | None = None,
+        attention_masks: torch.Tensor | None = None,
+    ) -> torch.Tensor:
         """
         计算长度加权损失
 
@@ -38,12 +46,10 @@ class LengthWeightedLoss(nn.Module):
             logits: 模型输出 [batch_size, num_classes]
             labels: 真实标签 [batch_size]
             lengths: 实际长度（可选） [batch_size]
-                如果提供，直接使用
-                如果不提供，从attention_mask计算
             attention_masks: 注意力掩码（可选） [batch_size, seq_len]
 
         Returns:
-            加权后的损失（标量或向量，取决于reduction）
+            加权后的损失
         """
         # 计算基础损失
         base_loss = self.ce_loss(logits, labels)  # [batch_size]
