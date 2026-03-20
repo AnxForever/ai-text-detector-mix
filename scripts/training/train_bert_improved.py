@@ -20,7 +20,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import BertForSequenceClassification, BertTokenizer, get_linear_schedule_with_warmup
 
-warnings.filterwarnings("ignore")
+warnings.filterwarnings("ignore", category=FutureWarning, module="transformers")
 
 # 添加项目根目录到路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
@@ -251,8 +251,8 @@ class BERTTrainer:
 
         return avg_loss, accuracy
 
-    def evaluate(self, data_loader: DataLoader) -> tuple[float, float, float, float, float]:
-        """评估模型"""
+    def evaluate(self, data_loader: DataLoader) -> tuple[float, float, float, float, float, list[int], list[int]]:
+        """评估模型，返回 (loss, acc, precision, recall, f1, preds, labels)."""
         self.model.eval()
         total_loss = 0
         all_preds = []
@@ -289,13 +289,15 @@ class BERTTrainer:
                 all_labels.extend(labels.cpu().numpy())
 
         # 计算指标
+        if len(data_loader) == 0:
+            return 0.0, 0.0, 0.0, 0.0, 0.0, [], []
         avg_loss = total_loss / len(data_loader)
         accuracy = accuracy_score(all_labels, all_preds)
         precision, recall, f1, _ = precision_recall_fscore_support(
             all_labels, all_preds, average='binary'
         )
 
-        return avg_loss, accuracy, precision, recall, f1
+        return avg_loss, accuracy, precision, recall, f1, all_preds, all_labels
 
     def train(self) -> None:
         print("\n" + "="*70)
@@ -306,6 +308,8 @@ class BERTTrainer:
         self._setup_optimizer()
 
         best_val_f1 = 0
+        patience = 3
+        patience_counter = 0
 
         for epoch in range(self.num_epochs):
             print(f"\nEpoch {epoch + 1}/{self.num_epochs}")
@@ -315,7 +319,7 @@ class BERTTrainer:
             train_loss, train_acc = self.train_epoch()
 
             # 验证
-            val_loss, val_acc, val_precision, val_recall, val_f1 = self.evaluate(self.val_loader)
+            val_loss, val_acc, val_precision, val_recall, val_f1, _, _ = self.evaluate(self.val_loader)
 
             # 记录历史
             self.history['train_loss'].append(train_loss)
@@ -332,8 +336,15 @@ class BERTTrainer:
             # 保存最佳模型
             if val_f1 > best_val_f1:
                 best_val_f1 = val_f1
+                patience_counter = 0
                 self.save_model('best_model')
                 print(f"✓ 保存最佳模型 (F1={val_f1:.4f})")
+            else:
+                patience_counter += 1
+                print(f"  Val F1 not improved ({patience_counter}/{patience})")
+                if patience_counter >= patience:
+                    print(f"\n  Early stopping at epoch {epoch + 1}")
+                    break
 
         # 保存最终模型
         self.save_model('final_model')
@@ -347,8 +358,8 @@ class BERTTrainer:
         # 加载最佳模型
         self.load_model('best_model')
 
-        # 评估
-        test_loss, test_acc, test_precision, test_recall, test_f1 = self.evaluate(self.test_loader)
+        # 评估（单次推理，复用 preds/labels 生成分类报告）
+        test_loss, test_acc, test_precision, test_recall, test_f1, all_preds, all_labels = self.evaluate(self.test_loader)
 
         print(f"\n测试集结果:")
         print(f"  Loss: {test_loss:.4f}")
@@ -357,28 +368,7 @@ class BERTTrainer:
         print(f"  Recall: {test_recall:.4f}")
         print(f"  F1 Score: {test_f1:.4f}")
 
-        # 详细分类报告
-        self.model.eval()
-        all_preds = []
-        all_labels = []
-
-        with torch.no_grad():
-            for batch in self.test_loader:
-                input_ids = batch['input_ids'].to(self.device)
-                attention_mask = batch['attention_mask'].to(self.device)
-                token_type_ids = batch['token_type_ids'].to(self.device)
-                labels = batch['labels']
-
-                outputs = self.model(
-                    input_ids=input_ids,
-                    attention_mask=attention_mask,
-                    token_type_ids=token_type_ids
-                )
-
-                preds = torch.argmax(outputs.logits, dim=1).cpu().numpy()
-                all_preds.extend(preds)
-                all_labels.extend(labels.numpy())
-
+        # 详细分类报告（复用已有结果，无需二次推理）
         print("\n分类报告:")
         print(classification_report(
             all_labels,

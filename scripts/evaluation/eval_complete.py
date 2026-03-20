@@ -11,6 +11,8 @@ from sklearn.metrics import accuracy_score, classification_report, confusion_mat
 from torch.utils.data import DataLoader, Dataset
 from transformers import BertForSequenceClassification, BertTokenizer
 
+from scripts.utils.paths import PATHS
+
 logger = logging.getLogger(__name__)
 
 
@@ -84,13 +86,14 @@ def main() -> None:
     logger.info("Device: %s", device)
 
     # Load model
-    tokenizer = BertTokenizer.from_pretrained("models/bert_v2_with_sep")
-    model = BertForSequenceClassification.from_pretrained("models/bert_v2_with_sep").to(device)
+    model_path = str(PATHS.classifier_model)
+    tokenizer = BertTokenizer.from_pretrained(model_path)
+    model = BertForSequenceClassification.from_pretrained(model_path).to(device)
 
     # 1. Overall test set
     logger.info("=" * 80)
     logger.info("1. 整体测试集评估")
-    test_df = pd.read_csv("datasets/active/core_v1/test.csv")
+    test_df = pd.read_csv(PATHS.core_v1_test)
     test_dataset = TextDataset(test_df["text"].tolist(), test_df["label"].tolist(), tokenizer)
     test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False)
 
@@ -105,10 +108,13 @@ def main() -> None:
     logger.info("混淆矩阵:\n%s", cm)
     logger.info("  TN: %d, FP: %d, FN: %d, TP: %d", cm[0][0], cm[0][1], cm[1][0], cm[1][1])
 
+    # Save overall accuracy before category loop overwrites it
+    overall_acc = acc
+
     # 2. Hybrid-only test
     logger.info("=" * 80)
     logger.info("2. 混合数据测试集评估")
-    hybrid_df = pd.read_csv("datasets/mixed/hybrid/hybrid_dataset_with_sep.csv")
+    hybrid_df = pd.read_csv(PATHS.hybrid_dir / "hybrid_dataset_with_sep.csv")
 
     logger.info("总样本数: %d", len(hybrid_df))
     for cat, count in hybrid_df["category"].value_counts().items():
@@ -132,7 +138,7 @@ def main() -> None:
     # 3. Summary
     logger.info("=" * 80)
     logger.info("3. 总结")
-    logger.info("模型: bert_v2_with_sep  |  整体准确率: %.2f%%", acc * 100)
+    logger.info("模型: %s  |  整体准确率: %.2f%%", PATHS.classifier_model.name, overall_acc * 100)
     logger.info("关键改进: [SEP]边界标记使C2检测率提升14%%")
 
 

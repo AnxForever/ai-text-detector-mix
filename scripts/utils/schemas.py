@@ -20,7 +20,7 @@ import logging
 from typing import Any
 
 import pandas as pd
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +90,7 @@ def validate_dataframe(
     for idx, row in target.iterrows():
         try:
             schema(**row.to_dict())
-        except Exception as e:
+        except ValidationError as e:
             errors.append({"row": idx, "error": str(e)})
 
     if errors:

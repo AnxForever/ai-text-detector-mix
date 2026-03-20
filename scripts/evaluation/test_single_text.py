@@ -11,14 +11,16 @@
 日期：2026-01-11
 """
 
-import sys
+import argparse
 import os
 import platform
-import torch
-import argparse
-from transformers import BertForSequenceClassification, BertTokenizer
+import sys
 import warnings
-warnings.filterwarnings('ignore')
+
+import torch
+from transformers import BertForSequenceClassification, BertTokenizer
+
+warnings.filterwarnings('ignore', category=FutureWarning, module='transformers')
 
 # 设置UTF-8编码
 os.environ['PYTHONIOENCODING'] = 'utf-8'
@@ -245,7 +247,7 @@ def main():
         epilog='支持 Windows PowerShell / Linux / macOS'
     )
     parser.add_argument('--model-dir', type=str,
-                       default='models/bert_improved/best_model',
+                       default='models/bert_v11c_boundary_fix',
                        help='模型目录路径')
     parser.add_argument('--device', type=str, default='cuda',
                        choices=['cuda', 'cpu'],

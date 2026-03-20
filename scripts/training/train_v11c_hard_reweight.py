@@ -412,7 +412,7 @@ def train_one_epoch(
     model: BertForSequenceClassification,
     loader: DataLoader,
     optimizer: torch.optim.Optimizer,
-    scheduler,
+    scheduler: torch.optim.lr_scheduler.LRScheduler,
     device: torch.device,
     loss_fn: HardAwareLengthAwareLabelSmoothingLoss,
     accum_steps: int,
@@ -456,7 +456,16 @@ def train_one_epoch(
             acc=f"{correct / total:.4f}",
         )
 
-    return total_loss / len(loader), correct / total
+    # Flush trailing gradients when len(loader) is not divisible by accum_steps
+    if len(loader) > 0 and (step + 1) % accum_steps != 0:
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        optimizer.step()
+        scheduler.step()
+        optimizer.zero_grad()
+
+    if len(loader) == 0:
+        return 0.0, 0.0
+    return total_loss / len(loader), correct / total if total > 0 else 0.0
 
 
 def evaluate(
@@ -489,6 +498,8 @@ def evaluate(
     labels = np.array(all_labels)
     lengths = np.array(all_lengths)
 
+    if len(loader) == 0:
+        return 0.0, 0.0, 0.0, 0.0, 0.0
     loss = total_loss / len(loader)
     acc = accuracy_score(labels, preds)
     precision, recall, f1, _ = precision_recall_fscore_support(

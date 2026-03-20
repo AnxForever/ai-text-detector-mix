@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from threading import Lock
 from typing import Any
 
-import requests
+import httpx
 import torch
 import uvicorn
 from fastapi import FastAPI, Header, HTTPException, Request
@@ -64,6 +64,12 @@ RATE_LIMIT_LOCK = Lock()
 
 
 def get_client_ip(request: Request) -> str:
+    """Extract client IP from request.
+
+    WARNING: X-Forwarded-For is trusted as-is. This server MUST be deployed
+    behind a reverse proxy that overwrites X-Forwarded-For, otherwise clients
+    can spoof their IP to bypass rate limiting.
+    """
     forwarded_for = request.headers.get("x-forwarded-for")
     if forwarded_for:
         return forwarded_for.split(",")[0].strip()
@@ -85,6 +91,10 @@ def enforce_rate_limit(request: Request, scope: str, max_requests: int) -> None:
         bucket = RATE_LIMIT_STATE[bucket_key]
         while bucket and bucket[0] < window_start:
             bucket.popleft()
+        # Evict empty buckets to prevent unbounded memory growth
+        if not bucket and bucket_key in RATE_LIMIT_STATE:
+            del RATE_LIMIT_STATE[bucket_key]
+            bucket = RATE_LIMIT_STATE[bucket_key]  # re-create via defaultdict
         if len(bucket) >= max_requests:
             raise HTTPException(status_code=429, detail="Too many requests, please retry later")
         bucket.append(now)
@@ -456,14 +466,17 @@ def resolve_api_key(authorization_header: str | None) -> str | None:
         return None
 
     auth = authorization_header.strip()
-    if auth.lower().startswith("bearer "):
+    if len(auth) > 7 and auth[:7].lower() == "bearer ":
         token = auth[7:].strip()
         return token or None
+    # Reject bare "Bearer" with no actual token
+    if auth.lower() == "bearer":
+        return None
     return auth or None
 
 
 @app.post("/v1/chat/completions")
-def chat_completions(
+async def chat_completions(
     payload: ChatRequest,
     http_request: Request,
     authorization: str | None = Header(default=None),
@@ -484,20 +497,20 @@ def chat_completions(
         raise HTTPException(status_code=400, detail="model name is too long")
 
     try:
-        response = requests.post(
-            f"{api_base}/chat/completions",
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": model_name,
-                "messages": payload.messages,
-                "temperature": payload.temperature,
-                "max_tokens": payload.max_tokens,
-            },
-            timeout=UPSTREAM_CHAT_TIMEOUT_SECONDS,
-        )
+        async with httpx.AsyncClient(timeout=UPSTREAM_CHAT_TIMEOUT_SECONDS) as client:
+            response = await client.post(
+                f"{api_base}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": model_name,
+                    "messages": payload.messages,
+                    "temperature": payload.temperature,
+                    "max_tokens": payload.max_tokens,
+                },
+            )
 
         if response.status_code != 200:
             raise HTTPException(
@@ -506,10 +519,8 @@ def chat_completions(
             )
 
         return response.json()
-    except requests.exceptions.Timeout as exc:
+    except httpx.TimeoutException as exc:
         raise HTTPException(status_code=504, detail="Upstream provider timeout") from exc
-    except requests.exceptions.JSONDecodeError as exc:
-        raise HTTPException(status_code=502, detail="Invalid JSON response from upstream provider") from exc
     except HTTPException:
         raise
     except Exception as exc:

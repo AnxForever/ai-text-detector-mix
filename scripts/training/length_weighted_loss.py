@@ -102,7 +102,13 @@ class AdaptiveLengthWeightedLoss(nn.Module):
     - 长且易预测的样本：最低权重
     """
 
-    def __init__(self, alpha_length=0.3, alpha_conf=0.2, max_length=512, reduction='mean'):
+    def __init__(
+        self,
+        alpha_length: float = 0.3,
+        alpha_conf: float = 0.2,
+        max_length: int = 512,
+        reduction: str = 'mean',
+    ) -> None:
         """
         Args:
             alpha_length: 长度权重强度
@@ -117,7 +123,13 @@ class AdaptiveLengthWeightedLoss(nn.Module):
         self.reduction = reduction
         self.ce_loss = nn.CrossEntropyLoss(reduction='none')
 
-    def forward(self, logits, labels, lengths=None, attention_masks=None):
+    def forward(
+        self,
+        logits: torch.Tensor,
+        labels: torch.Tensor,
+        lengths: torch.Tensor | None = None,
+        attention_masks: torch.Tensor | None = None,
+    ) -> torch.Tensor:
         """
         计算自适应长度加权损失
 
@@ -173,7 +185,13 @@ class FocalLengthWeightedLoss(nn.Module):
     两者结合可以更好地平衡学习
     """
 
-    def __init__(self, alpha_length=0.3, gamma=2.0, max_length=512, reduction='mean'):
+    def __init__(
+        self,
+        alpha_length: float = 0.3,
+        gamma: float = 2.0,
+        max_length: int = 512,
+        reduction: str = 'mean',
+    ) -> None:
         """
         Args:
             alpha_length: 长度权重强度
@@ -187,7 +205,13 @@ class FocalLengthWeightedLoss(nn.Module):
         self.max_length = max_length
         self.reduction = reduction
 
-    def forward(self, logits, labels, lengths=None, attention_masks=None):
+    def forward(
+        self,
+        logits: torch.Tensor,
+        labels: torch.Tensor,
+        lengths: torch.Tensor | None = None,
+        attention_masks: torch.Tensor | None = None,
+    ) -> torch.Tensor:
         """
         计算Focal + 长度加权损失
 

@@ -2,15 +2,11 @@
 
 from __future__ import annotations
 
-import os
 import tempfile
 
 import pandas as pd
 import pytest
-
-import sys
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+from pydantic import ValidationError
 
 from scripts.utils.paths import PATHS, PROJECT_ROOT
 from scripts.utils.schemas import DetectionSample, HybridSample, TrainingConfig, validate_dataframe
@@ -73,19 +69,19 @@ class TestDetectionSample:
         assert s.label == 1
 
     def test_empty_text_rejected(self):
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             DetectionSample(text="", label=0)
 
     def test_blank_text_rejected(self):
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             DetectionSample(text="   ", label=0)
 
     def test_invalid_label_rejected(self):
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             DetectionSample(text="hello", label=2)
 
     def test_negative_label_rejected(self):
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             DetectionSample(text="hello", label=-1)
 
 
@@ -101,7 +97,7 @@ class TestHybridSample:
         assert s.category == "Human"
 
     def test_invalid_category(self):
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             HybridSample(text="text", label=0, category="C5")
 
 
@@ -119,11 +115,11 @@ class TestTrainingConfig:
         assert c.max_length == 256
 
     def test_invalid_batch_size(self):
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             TrainingConfig(batch_size=0)
 
     def test_invalid_learning_rate(self):
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             TrainingConfig(learning_rate=-0.01)
 
 

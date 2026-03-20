@@ -9,17 +9,10 @@ import os
 import tempfile
 from unittest.mock import MagicMock, patch
 
+import pytest
 import torch
 import torch.nn as nn
 
-import sys
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
-
-# =========================================================================
-# LengthWeightedLoss
-# =========================================================================
 from scripts.training.length_weighted_loss import LengthWeightedLoss
 
 
@@ -132,20 +125,38 @@ class TestTextDataset:
 # =========================================================================
 
 # The training module imports scripts.bert_prep which may not exist (archived).
-# We pre-inject a mock module so the import chain succeeds.
-_mock_bert_prep = MagicMock()
-sys.modules.setdefault("scripts.bert_prep", _mock_bert_prep)
-sys.modules.setdefault("scripts.bert_prep.create_bert_dataset", _mock_bert_prep)
+# We use a session-scoped fixture to mock it before the module is imported.
 
-import importlib
+@pytest.fixture(autouse=True, scope="session")
+def _mock_bert_prep_modules():
+    """Inject mock modules for scripts.bert_prep before any BERTTrainer import.
 
+    Also mock transformers if not installed, so the module can be imported
+    in environments without GPU dependencies.
+    """
+    import sys
+    mock = MagicMock()
+    injected_keys: list[str] = []
 
-def _load_trainer_class():
-    """Import BERTTrainer with mocked model dependencies."""
-    import scripts.training.train_bert_improved as mod
+    for key in ("scripts.bert_prep", "scripts.bert_prep.create_bert_dataset"):
+        if key not in sys.modules:
+            sys.modules[key] = mock
+            injected_keys.append(key)
 
-    importlib.reload(mod)  # ensure fresh load with mocks in place
-    return mod.BERTTrainer
+    # Mock transformers if not installed
+    if "transformers" not in sys.modules:
+        try:
+            import transformers  # noqa: F401
+        except ImportError:
+            tx_mock = MagicMock()
+            for tx_key in ("transformers",):
+                sys.modules[tx_key] = tx_mock
+                injected_keys.append(tx_key)
+
+    yield
+
+    for key in injected_keys:
+        sys.modules.pop(key, None)
 
 
 class TestBERTTrainerConfig:
@@ -153,15 +164,16 @@ class TestBERTTrainerConfig:
 
     def _make_trainer(self, **kwargs):
         """Helper: create a BERTTrainer with mocked model loading."""
-        with patch("scripts.training.train_bert_improved.BertTokenizer") as tok_cls, \
-             patch("scripts.training.train_bert_improved.BertForSequenceClassification") as mdl_cls:
-            mock_model = MagicMock()
-            mock_model.to.return_value = mock_model
+        import scripts.training.train_bert_improved as mod
+
+        mock_model = MagicMock()
+        mock_model.to.return_value = mock_model
+
+        with patch.object(mod, "BertTokenizer") as tok_cls, \
+             patch.object(mod, "BertForSequenceClassification") as mdl_cls:
             mdl_cls.from_pretrained.return_value = mock_model
             tok_cls.from_pretrained.return_value = MagicMock()
-
-            BERTTrainer = _load_trainer_class()
-            return BERTTrainer(**kwargs)
+            return mod.BERTTrainer(**kwargs)
 
     def test_trainer_init_defaults(self):
         with tempfile.TemporaryDirectory() as tmpdir:

@@ -11,13 +11,6 @@ from unittest.mock import MagicMock
 import pytest
 from fastapi import HTTPException
 
-# ---------------------------------------------------------------------------
-# Import helpers directly — they are module-level functions, no model needed.
-# ---------------------------------------------------------------------------
-import sys, os
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
 from api.api import (
     collect_risk_flags,
     get_client_ip,
@@ -221,9 +214,7 @@ class TestResolveApiKey:
         monkeypatch.delenv("OPENAI_API_KEY", raising=False)
         assert resolve_api_key(None) is None
 
-    def test_bearer_only_no_token_returns_raw(self, monkeypatch):
-        """'Bearer ' stripped to 'Bearer', fails startswith('bearer '), returned as raw."""
+    def test_bearer_only_no_token_returns_none(self, monkeypatch):
+        """'Bearer ' with no actual token should return None."""
         monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-        # "Bearer ".strip() = "Bearer", "bearer".startswith("bearer ") = False
-        # Falls through to `return auth or None` → "Bearer"
-        assert resolve_api_key("Bearer ") == "Bearer"
+        assert resolve_api_key("Bearer ") is None
