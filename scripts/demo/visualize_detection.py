@@ -11,8 +11,8 @@ class HybridTextDetector:
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         
         # 加载分类模型
-        self.classifier_tokenizer = BertTokenizer.from_pretrained('models/bert_v2_with_sep')
-        self.classifier = BertForSequenceClassification.from_pretrained('models/bert_v2_with_sep').to(self.device)
+        self.classifier_tokenizer = BertTokenizer.from_pretrained('models/bert_v11c_boundary_fix')
+        self.classifier = BertForSequenceClassification.from_pretrained('models/bert_v11c_boundary_fix').to(self.device)
         
         # 加载span检测模型
         self.span_tokenizer = BertTokenizer.from_pretrained('models/bert_span_detector')
