@@ -23,11 +23,21 @@ omit = [
     "*/__pycache__/*",
     "scripts/generation/*",
     "scripts/demo/*",
+    "scripts/training/*",
+    "scripts/evaluation/*",
+    "scripts/data_cleaning/*",
+    "scripts/bert_prep/*",
+    "scripts/hybrid/*",
+    "scripts/maintenance/*",
+    "scripts/generate_dataset_model_report.py",
+    "scripts/test_nvapi.py",
+    "scripts/test_nvapi_raw.py",
+    "scripts/test_proxies.py",
 ]
 
 [tool.coverage.report]
 show_missing = true
-fail_under = 50
+fail_under = 65
 exclude_lines = [
     "pragma: no cover",
     "if __name__ == .__main__.",

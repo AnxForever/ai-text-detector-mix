@@ -12,6 +12,7 @@ import pytest
 from fastapi import HTTPException
 
 from api.api import (
+    build_reason_analysis,
     collect_risk_flags,
     get_client_ip,
     infer_domain_hint,
@@ -94,22 +95,30 @@ class TestCollectRiskFlags:
     """collect_risk_flags: heuristic risk detection."""
 
     def test_short_text_flag(self):
-        flags = collect_risk_flags("短", confidence=90, boundary_sentence_index=None, result_type="human")
+        flags = collect_risk_flags(
+            "短", confidence=90, boundary_sentence_index=None, result_type="human"
+        )
         assert "short_text" in flags
 
     def test_long_text_flag(self):
         text = "x" * 2049
-        flags = collect_risk_flags(text, confidence=90, boundary_sentence_index=None, result_type="human")
+        flags = collect_risk_flags(
+            text, confidence=90, boundary_sentence_index=None, result_type="human"
+        )
         assert "long_text" in flags
 
     def test_extreme_length_flag(self):
         text = "x" * 5001
-        flags = collect_risk_flags(text, confidence=90, boundary_sentence_index=None, result_type="human")
+        flags = collect_risk_flags(
+            text, confidence=90, boundary_sentence_index=None, result_type="human"
+        )
         assert "extreme_length" in flags
         assert "long_text" in flags
 
     def test_low_confidence_flag(self):
-        flags = collect_risk_flags("一些文本", confidence=60, boundary_sentence_index=None, result_type="human")
+        flags = collect_risk_flags(
+            "一些文本", confidence=60, boundary_sentence_index=None, result_type="human"
+        )
         assert "low_confidence" in flags
 
     def test_template_like_flag(self):
@@ -126,8 +135,60 @@ class TestCollectRiskFlags:
 
     def test_no_flags_normal_text(self):
         text = "这是一段正常长度的文本，" * 15  # >128 chars to avoid short_text flag
-        flags = collect_risk_flags(text, confidence=90, boundary_sentence_index=0, result_type="human")
+        flags = collect_risk_flags(
+            text, confidence=90, boundary_sentence_index=0, result_type="human"
+        )
         assert flags == []
+
+
+# =========================================================================
+# build_reason_analysis
+# =========================================================================
+class TestBuildReasonAnalysis:
+    """build_reason_analysis: human-readable rationale generation."""
+
+    def test_ai_summary_mentions_score_advantage(self):
+        summary, signals = build_reason_analysis(
+            result_type="ai",
+            confidence=96,
+            ai_percentage=95,
+            human_percentage=5,
+            boundary_sentence_index=None,
+            domain_hint="general",
+            risk_flags=[],
+        )
+        assert "AI 生成" in summary
+        assert any("AI倾向明显高于人类倾向" in signal for signal in signals)
+        assert any("未发现明确的混合边界" in signal for signal in signals)
+
+    def test_mixed_summary_mentions_boundary(self):
+        summary, signals = build_reason_analysis(
+            result_type="mixed",
+            confidence=72,
+            ai_percentage=58,
+            human_percentage=42,
+            boundary_sentence_index=2,
+            domain_hint="technical",
+            risk_flags=["low_confidence"],
+        )
+        assert "混合文本" in summary
+        assert "第 3 句附近" in summary
+        assert any("风格切换" in signal for signal in signals)
+        assert any("技术术语" in signal for signal in signals)
+        assert any("低置信区间" in signal for signal in signals)
+
+    def test_short_text_summary_adds_caution(self):
+        summary, signals = build_reason_analysis(
+            result_type="human",
+            confidence=88,
+            ai_percentage=12,
+            human_percentage=88,
+            boundary_sentence_index=None,
+            domain_hint="casual",
+            risk_flags=["short_text"],
+        )
+        assert "文本较短" in summary
+        assert any("口语化表达" in signal for signal in signals)
 
 
 # =========================================================================
@@ -137,9 +198,15 @@ class TestGetClientIp:
     """get_client_ip: extract IP from request."""
 
     def test_from_x_forwarded_for(self):
+        # Policy: rightmost XFF entry is the last trusted proxy (spoof-resistant).
         request = MagicMock()
         request.headers = {"x-forwarded-for": "1.2.3.4, 5.6.7.8"}
-        assert get_client_ip(request) == "1.2.3.4"
+        assert get_client_ip(request) == "5.6.7.8"
+
+    def test_prefers_x_real_ip_over_xff(self):
+        request = MagicMock()
+        request.headers = {"x-real-ip": "9.9.9.9", "x-forwarded-for": "1.2.3.4, 5.6.7.8"}
+        assert get_client_ip(request) == "9.9.9.9"
 
     def test_from_client_host(self):
         request = MagicMock()
