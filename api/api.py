@@ -356,7 +356,7 @@ class HybridTextDetector:
         encoding = self.classifier_tokenizer(
             text,
             max_length=self.classifier_max_length,
-            padding="max_length",
+            padding=True,
             truncation=True,
             return_tensors="pt",
         )
@@ -383,7 +383,7 @@ class HybridTextDetector:
         encoding = self.classifier_tokenizer(
             texts,
             max_length=self.classifier_max_length,
-            padding="max_length",
+            padding=True,
             truncation=True,
             return_tensors="pt",
         )
@@ -412,7 +412,7 @@ class HybridTextDetector:
         encoding = self.span_tokenizer(
             text_clean,
             max_length=512,
-            padding="max_length",
+            padding=True,
             truncation=True,
             return_tensors="pt",
         )
@@ -475,6 +475,15 @@ detector: HybridTextDetector | None = None
 async def lifespan(application: FastAPI):
     global detector
     detector = HybridTextDetector()
+    # Warmup: 触发 PyTorch kernel JIT 编译 & 把模型权重从 swap 拉回内存,
+    # 避免首个真实请求承担 10-30s 冷启动开销。
+    try:
+        detector.classify("预热")
+        detector.classify_batch(["人工智能检测预热。", "这是一段示例文本。"])
+        detector.detect_boundary("人工智能正在改变世界。这是一段用于预热的示例文本。")
+        logger.info("Detector warmup complete.")
+    except Exception as warm_exc:
+        logger.warning("Detector warmup failed (non-fatal): %s", warm_exc)
     yield
 
 
