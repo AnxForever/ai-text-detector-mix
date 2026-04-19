@@ -29,6 +29,9 @@ logger = logging.getLogger(__name__)
 
 CLASSIFIER_MODEL_PATH = os.getenv("DETECTOR_CLASSIFIER_MODEL", "models/bert_v11c_boundary_fix")
 SPAN_MODEL_PATH = os.getenv("DETECTOR_SPAN_MODEL", "models/bert_span_detector")
+USE_INT8 = os.getenv("DETECTOR_USE_INT8", "0").strip().lower() in {"1", "true", "yes"}
+INT8_CLASSIFIER_PATH = os.getenv("DETECTOR_INT8_CLASSIFIER", "models/bert_v11c_int8")
+INT8_SPAN_PATH = os.getenv("DETECTOR_INT8_SPAN", "models/bert_span_int8")
 CLASSIFIER_MAX_LENGTH = int(os.getenv("DETECTOR_MAX_LENGTH", "256"))
 CLASSIFIER_TEMPERATURE = float(os.getenv("DETECTOR_TEMPERATURE", "0.8165"))
 DECISION_THRESHOLD = float(os.getenv("DETECTOR_DECISION_THRESHOLD", "0.8"))
@@ -318,22 +321,47 @@ def verify_internal_token(header_token: str | None) -> None:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 
+def _load_quantized_model(model_cls: type, fp32_path: str, state_dict_path: str):
+    """Rebuild quantize_dynamic wrapper from FP32 config + load INT8 state_dict.
+
+    state_dict files are cross-transformers-version compatible (tensors only),
+    whereas pickled whole-model files break across 4.x / 5.x.
+    """
+    base = model_cls.from_pretrained(fp32_path, attn_implementation="eager")
+    base.eval()
+    wrapper = torch.quantization.quantize_dynamic(base, {torch.nn.Linear}, dtype=torch.qint8)
+    state = torch.load(state_dict_path, map_location="cpu")
+    wrapper.load_state_dict(state)
+    wrapper.eval()
+    return wrapper
+
+
 class HybridTextDetector:
     def __init__(self) -> None:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        logger.info("Loading models on %s ...", self.device)
+        logger.info("Loading models on %s (INT8=%s) ...", self.device, USE_INT8)
         self.classifier_max_length = CLASSIFIER_MAX_LENGTH
         self.classifier_temperature = max(CLASSIFIER_TEMPERATURE, 1e-6)
 
+        tokenizer_src = INT8_CLASSIFIER_PATH if USE_INT8 else CLASSIFIER_MODEL_PATH
+        span_tokenizer_src = INT8_SPAN_PATH if USE_INT8 else SPAN_MODEL_PATH
+
         try:
-            self.classifier_tokenizer = BertTokenizer.from_pretrained(CLASSIFIER_MODEL_PATH)
-            self.classifier = BertForSequenceClassification.from_pretrained(
-                CLASSIFIER_MODEL_PATH
-            ).to(self.device)
-            self.classifier.eval()
+            self.classifier_tokenizer = BertTokenizer.from_pretrained(tokenizer_src)
+            if USE_INT8:
+                self.classifier = _load_quantized_model(
+                    BertForSequenceClassification,
+                    CLASSIFIER_MODEL_PATH,
+                    os.path.join(INT8_CLASSIFIER_PATH, "quantized_state_dict.pt"),
+                )
+            else:
+                self.classifier = BertForSequenceClassification.from_pretrained(
+                    CLASSIFIER_MODEL_PATH
+                ).to(self.device)
+                self.classifier.eval()
             logger.info(
                 "Classifier loaded (%s, max_length=%d, temperature=%.4f).",
-                CLASSIFIER_MODEL_PATH,
+                tokenizer_src,
                 self.classifier_max_length,
                 self.classifier_temperature,
             )
@@ -342,12 +370,19 @@ class HybridTextDetector:
             raise
 
         try:
-            self.span_tokenizer = BertTokenizer.from_pretrained(SPAN_MODEL_PATH)
-            self.span_detector = BertForTokenClassification.from_pretrained(SPAN_MODEL_PATH).to(
-                self.device
-            )
-            self.span_detector.eval()
-            logger.info("Span detector loaded (%s).", SPAN_MODEL_PATH)
+            self.span_tokenizer = BertTokenizer.from_pretrained(span_tokenizer_src)
+            if USE_INT8:
+                self.span_detector = _load_quantized_model(
+                    BertForTokenClassification,
+                    SPAN_MODEL_PATH,
+                    os.path.join(INT8_SPAN_PATH, "quantized_state_dict.pt"),
+                )
+            else:
+                self.span_detector = BertForTokenClassification.from_pretrained(SPAN_MODEL_PATH).to(
+                    self.device
+                )
+                self.span_detector.eval()
+            logger.info("Span detector loaded (%s).", span_tokenizer_src)
         except Exception as exc:
             logger.error("Error loading span detector: %s", exc)
             raise
@@ -524,6 +559,61 @@ app.add_middleware(
 @app.get("/api/health")
 async def health_check() -> dict[str, Any]:
     accuracy_pct = CLASSIFIER_METRICS.get("three_set_avg")
+    system_info: dict[str, Any] = {}
+    try:
+        meminfo: dict[str, int] = {}
+        with open("/proc/meminfo") as f:
+            for line in f:
+                key, _, value = line.partition(":")
+                parts = value.strip().split()
+                if parts:
+                    meminfo[key] = int(parts[0])  # kB
+        mem_total_mb = meminfo.get("MemTotal", 0) / 1024
+        mem_avail_mb = meminfo.get("MemAvailable", 0) / 1024
+        swap_total_mb = meminfo.get("SwapTotal", 0) / 1024
+        swap_free_mb = meminfo.get("SwapFree", 0) / 1024
+
+        proc_rss_kb = 0
+        try:
+            with open("/proc/self/status") as f:
+                for line in f:
+                    if line.startswith("VmRSS:"):
+                        proc_rss_kb = int(line.split()[1])
+                        break
+        except OSError:
+            pass
+
+        try:
+            with open("/proc/loadavg") as f:
+                load_parts = f.read().split()[:3]
+        except OSError:
+            load_parts = None
+
+        system_info = {
+            "memory": {
+                "totalMB": round(mem_total_mb, 1),
+                "availableMB": round(mem_avail_mb, 1),
+                "usedPercent": (
+                    round((mem_total_mb - mem_avail_mb) / mem_total_mb * 100, 1)
+                    if mem_total_mb
+                    else None
+                ),
+            },
+            "swap": {
+                "totalMB": round(swap_total_mb, 1),
+                "usedMB": round(swap_total_mb - swap_free_mb, 1),
+                "usedPercent": (
+                    round((swap_total_mb - swap_free_mb) / swap_total_mb * 100, 1)
+                    if swap_total_mb
+                    else None
+                ),
+            },
+            "processRssMB": round(proc_rss_kb / 1024, 1),
+            "loadAvg": load_parts,
+        }
+    except Exception as exc:  # pragma: no cover
+        system_info = {"error": str(exc)}
+
     return {
         "status": "ok",
         "detectorReady": detector is not None,
@@ -543,6 +633,7 @@ async def health_check() -> dict[str, Any]:
         "spanDetectorReady": detector is not None
         and hasattr(detector, "span_detector")
         and detector.span_detector is not None,
+        "system": system_info,
         "timestamp": datetime.now().isoformat(),
     }
 
