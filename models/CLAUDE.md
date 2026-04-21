@@ -221,6 +221,13 @@ models/
 
 ## 变更记录 (Changelog)
 
+### 2026-04-21
+- **bert_v11c_boundary_fix 正式发布至 HuggingFace Hub**: [AnxForever/chinese-ai-detector-bert](https://huggingface.co/AnxForever/chinese-ai-detector-bert)
+- config.json 补齐 `id2label` / `label2id` 映射 (0=human-written, 1=AI-generated)
+- README (model card) 添加 Temperature Scaling 推理示例 (T=0.8165)
+- training_log.json 去除 WSL 本机绝对路径，改为相对路径
+- 新增一次性上传脚本: `scripts/deployment/upload_v11c_to_hf.py`
+
 ### 2026-02-13
 - 添加 bert_v11c_boundary_fix (风险治理路线 V11c)
 - 推荐模型更新为 bert_v11c_boundary_fix (三集平均 98.56%)
