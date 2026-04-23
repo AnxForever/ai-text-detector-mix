@@ -179,6 +179,33 @@ class TestDetectEndpoint:
         assert "混合文本" in response.reasonSummary
         assert any("风格切换" in signal for signal in response.reasonSignals)
 
+    def test_detect_uses_exact_feedback_override(self, api_context, monkeypatch):
+        mock_det = api_context
+        monkeypatch.setattr(
+            api_module,
+            "lookup_feedback_override",
+            lambda **kwargs: {
+                "confirmed_label": "human",
+                "boundary": None,
+                "domain_hint": "formal",
+                "source": "manual_feedback_exact_match",
+            },
+        )
+
+        response = api_module.detect_text(
+            api_module.DetectRequest(text="这是一段曾经被误判、后来被人工确认的人类文本。"),
+            make_request(),
+        )
+
+        assert response.type == "human"
+        assert response.confidence == 100.0
+        assert response.humanPercentage == 100
+        assert response.aiPercentage == 0
+        assert response.riskFlags == ["feedback_override_exact_match"]
+        assert "完全相同样本" in response.reasonSummary
+        assert any("exact match" in signal for signal in response.reasonSignals)
+        mock_det.classify.assert_not_called()
+
 
 class TestFeedbackEndpoint:
     """POST /api/feedback"""
@@ -204,12 +231,8 @@ class TestFeedbackEndpoint:
         assert response.status == "ok"
         assert response.misclassifiedSaved is False
 
-        rows = [
-            json.loads(line)
-            for line in (tmp_path / "confirmations.jsonl").read_text(encoding="utf-8").splitlines()
-        ]
-        assert len(rows) == 1
-        assert rows[0]["confirmed_correct"] is True
+        assert not (tmp_path / "confirmations.jsonl").exists()
+        assert not (tmp_path / "misclassified_samples.jsonl").exists()
 
     def test_confirm_incorrect_prediction_writes_dataset(
         self,
@@ -248,6 +271,49 @@ class TestFeedbackEndpoint:
         assert correction_rows[0]["confirmed_label"] == "human"
         assert "manual_feedback" in correction_rows[0]["tags"]
 
+    def test_duplicate_incorrect_prediction_is_deduplicated(
+        self,
+        api_context,
+        tmp_path,
+        monkeypatch,
+    ):
+        original_persist_feedback = api_module.persist_feedback
+
+        def persist_feedback_for_test(**kwargs):
+            return original_persist_feedback(**kwargs, output_dir=tmp_path)
+
+        monkeypatch.setattr(api_module, "persist_feedback", persist_feedback_for_test)
+
+        first_response = api_module.submit_feedback(
+            api_module.FeedbackRequest(
+                text="重复提交的误判样本",
+                predictedType="ai",
+                confirmedCorrect=False,
+                confirmedLabel="human",
+            ),
+            make_request(),
+        )
+        second_response = api_module.submit_feedback(
+            api_module.FeedbackRequest(
+                text="  重复提交的误判样本  ",
+                predictedType="ai",
+                confirmedCorrect=False,
+                confirmedLabel="human",
+            ),
+            make_request(),
+        )
+
+        correction_rows = [
+            json.loads(line)
+            for line in (tmp_path / "misclassified_samples.jsonl")
+            .read_text(encoding="utf-8")
+            .splitlines()
+        ]
+
+        assert first_response.misclassifiedSaved is True
+        assert second_response.misclassifiedSaved is False
+        assert len(correction_rows) == 1
+
     def test_incorrect_prediction_requires_confirmed_label(self, api_context):
         with pytest.raises(HTTPException) as exc_info:
             api_module.submit_feedback(
@@ -260,6 +326,44 @@ class TestFeedbackEndpoint:
             )
 
         assert exc_info.value.status_code == 422
+
+    def test_feedback_storage_failure_returns_json_500(self, api_context, monkeypatch):
+        def persist_feedback_for_test(**kwargs):
+            raise OSError("permission denied")
+
+        monkeypatch.setattr(api_module, "persist_feedback", persist_feedback_for_test)
+
+        with pytest.raises(HTTPException) as exc_info:
+            api_module.submit_feedback(
+                api_module.FeedbackRequest(
+                    text="人工确认写入失败。",
+                    predictedType="human",
+                    confirmedCorrect=True,
+                ),
+                make_request(),
+            )
+
+        assert exc_info.value.status_code == 500
+        assert exc_info.value.detail == "Feedback storage unavailable"
+
+    def test_feedback_unexpected_failure_returns_json_500(self, api_context, monkeypatch):
+        def persist_feedback_for_test(**kwargs):
+            raise RuntimeError("unexpected failure")
+
+        monkeypatch.setattr(api_module, "persist_feedback", persist_feedback_for_test)
+
+        with pytest.raises(HTTPException) as exc_info:
+            api_module.submit_feedback(
+                api_module.FeedbackRequest(
+                    text="人工确认未知异常。",
+                    predictedType="human",
+                    confirmedCorrect=True,
+                ),
+                make_request(),
+            )
+
+        assert exc_info.value.status_code == 500
+        assert exc_info.value.detail == "Feedback submission failed"
 
 
 class TestChatEndpoint:

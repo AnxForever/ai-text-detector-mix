@@ -1,4 +1,5 @@
 import json
+import hashlib
 import logging
 import os
 import re
@@ -139,7 +140,7 @@ FEEDBACK_WRITE_LOCK = Lock()
 DEFAULT_FEEDBACK_DIR = Path(os.getenv("DETECTOR_FEEDBACK_DIR", "/app/datasets/feedback_loop"))
 
 try:
-    from scripts.utils.feedback_loop import persist_feedback
+    from scripts.utils.feedback_loop import lookup_feedback_override, persist_feedback
 except Exception:
 
     def _normalize_feedback_label(label: str) -> str:
@@ -189,6 +190,133 @@ except Exception:
                 json.dump(record, file_obj, ensure_ascii=False)
                 file_obj.write("\n")
 
+    def _canonicalize_feedback_text(text: str) -> str:
+        return " ".join(text.split())
+
+    def _build_feedback_dedup_key(text: str) -> str:
+        canonical_text = _canonicalize_feedback_text(text)
+        return hashlib.sha256(canonical_text.encode("utf-8")).hexdigest()
+
+    def _load_existing_dedup_keys(path: Path) -> set[str]:
+        if not path.exists():
+            return set()
+
+        dedup_keys: set[str] = set()
+        with path.open("r", encoding="utf-8") as file_obj:
+            for raw_line in file_obj:
+                line = raw_line.strip()
+                if not line:
+                    continue
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+
+                dedup_key = row.get("dedup_key")
+                if isinstance(dedup_key, str) and dedup_key:
+                    dedup_keys.add(dedup_key)
+                    continue
+
+                text = row.get("text")
+                if isinstance(text, str) and text.strip():
+                    dedup_keys.add(_build_feedback_dedup_key(text))
+
+        return dedup_keys
+
+    def _extract_record_dedup_key(row: dict[str, Any]) -> str | None:
+        dedup_key = row.get("dedup_key")
+        if isinstance(dedup_key, str) and dedup_key:
+            return dedup_key
+
+        text = row.get("text")
+        if isinstance(text, str) and text.strip():
+            return _build_feedback_dedup_key(text)
+
+        return None
+
+    def _load_latest_records_by_dedup_key(path: Path) -> dict[str, dict[str, Any]]:
+        if not path.exists():
+            return {}
+
+        latest_records: dict[str, dict[str, Any]] = {}
+        with path.open("r", encoding="utf-8") as file_obj:
+            for raw_line in file_obj:
+                line = raw_line.strip()
+                if not line:
+                    continue
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+
+                dedup_key = _extract_record_dedup_key(row)
+                if dedup_key:
+                    latest_records[dedup_key] = row
+
+        return latest_records
+
+    def _load_conflicted_dedup_keys(path: Path) -> set[str]:
+        if not path.exists():
+            return set()
+
+        conflicted_keys: set[str] = set()
+        with path.open("r", encoding="utf-8") as file_obj:
+            for raw_line in file_obj:
+                line = raw_line.strip()
+                if not line:
+                    continue
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+
+                dedup_key = _extract_record_dedup_key(row)
+                if dedup_key:
+                    conflicted_keys.add(dedup_key)
+
+        return conflicted_keys
+
+    def lookup_feedback_override(
+        *,
+        text: str,
+        output_dir: Path | None = None,
+    ) -> dict[str, Any] | None:
+        cleaned_text = text.strip()
+        if not cleaned_text:
+            return None
+
+        stored_dir = output_dir or DEFAULT_FEEDBACK_DIR
+        corrections_path = stored_dir / "misclassified_samples.jsonl"
+        conflicts_path = stored_dir / "feedback_conflicts.jsonl"
+        dedup_key = _build_feedback_dedup_key(cleaned_text)
+
+        if dedup_key in _load_conflicted_dedup_keys(conflicts_path):
+            return None
+
+        existing_records = _load_latest_records_by_dedup_key(corrections_path)
+        record = existing_records.get(dedup_key)
+        if record is None:
+            return None
+
+        confirmed_label = record.get("confirmed_label")
+        if not isinstance(confirmed_label, str):
+            return None
+
+        try:
+            normalized_label = _normalize_feedback_label(confirmed_label)
+        except ValueError:
+            return None
+
+        boundary = record.get("boundary")
+        return {
+            "feedback_id": record.get("feedback_id"),
+            "dedup_key": dedup_key,
+            "confirmed_label": normalized_label,
+            "boundary": boundary if isinstance(boundary, int) and boundary >= 0 else None,
+            "domain_hint": record.get("domain_hint"),
+            "source": "manual_feedback_exact_match",
+        }
+
     def persist_feedback(
         *,
         text: str,
@@ -220,8 +348,9 @@ except Exception:
         timestamp = datetime.now().isoformat()
         feedback_id = uuid.uuid4().hex
         stored_dir = output_dir or DEFAULT_FEEDBACK_DIR
-        confirmations_path = stored_dir / "confirmations.jsonl"
         corrections_path = stored_dir / "misclassified_samples.jsonl"
+        conflicts_path = stored_dir / "feedback_conflicts.jsonl"
+        dedup_key = _build_feedback_dedup_key(cleaned_text)
         feedback_tags = _derive_feedback_tags(
             predicted_label=normalized_predicted,
             confirmed_label=normalized_confirmed,
@@ -244,24 +373,51 @@ except Exception:
             "human_percentage": human_percentage,
             "boundary": boundary,
             "domain_hint": domain_hint,
+            "dedup_key": dedup_key,
+            "dataset_type": "manual_correction",
         }
 
-        _append_jsonl(confirmations_path, record)
-
         if not confirmed_correct:
-            correction_record = {
-                **record,
-                "dataset_type": "manual_correction",
-            }
-            _append_jsonl(corrections_path, correction_record)
+            corrections_path.parent.mkdir(parents=True, exist_ok=True)
+            with FEEDBACK_WRITE_LOCK:
+                existing_records = _load_latest_records_by_dedup_key(corrections_path)
+                existing_record = existing_records.get(dedup_key)
+                if existing_record is None:
+                    with corrections_path.open("a", encoding="utf-8") as file_obj:
+                        json.dump(record, file_obj, ensure_ascii=False)
+                        file_obj.write("\n")
+                    misclassified_saved = True
+                    conflict_detected = False
+                else:
+                    existing_confirmed_label = existing_record.get("confirmed_label")
+                    if existing_confirmed_label == normalized_confirmed:
+                        misclassified_saved = False
+                        conflict_detected = False
+                    else:
+                        conflict_record = {
+                            **record,
+                            "event_type": "conflicting_manual_feedback",
+                            "existing_feedback_id": existing_record.get("feedback_id"),
+                            "existing_confirmed_label": existing_confirmed_label,
+                        }
+                        with conflicts_path.open("a", encoding="utf-8") as file_obj:
+                            json.dump(conflict_record, file_obj, ensure_ascii=False)
+                            file_obj.write("\n")
+                        misclassified_saved = False
+                        conflict_detected = True
+        else:
+            misclassified_saved = False
+            conflict_detected = False
 
         return {
             "feedback_id": feedback_id,
             "created_at": timestamp,
             "stored_dir": str(stored_dir),
-            "confirmations_path": str(confirmations_path),
             "corrections_path": str(corrections_path),
-            "misclassified_saved": not confirmed_correct,
+            "conflicts_path": str(conflicts_path),
+            "misclassified_saved": misclassified_saved,
+            "duplicate_skipped": not confirmed_correct and not misclassified_saved,
+            "conflict_detected": conflict_detected,
         }
 
 
@@ -892,6 +1048,106 @@ def split_sentences(text: str) -> list[str]:
     return [sentence for sentence in temp_sentences if sentence.strip()]
 
 
+def build_feedback_override_response(
+    *,
+    text: str,
+    override: dict[str, Any],
+    processing_time: int,
+) -> DetectionResponse:
+    """Build a response from an exact-match manual correction record."""
+    result_type = override["confirmed_label"]
+    boundary_sentence_index = override.get("boundary")
+    final_sentences = split_sentences(text)
+
+    if result_type == "human":
+        human_percentage = 100
+        ai_percentage = 0
+        sentence_results = [
+            SentenceResult(text=sentence, isAI=False, confidence=100.0)
+            for sentence in final_sentences
+        ]
+    elif result_type == "ai":
+        human_percentage = 0
+        ai_percentage = 100
+        sentence_results = [
+            SentenceResult(text=sentence, isAI=True, confidence=100.0)
+            for sentence in final_sentences
+        ]
+    else:
+        human_percentage = 50
+        ai_percentage = 50
+        if (
+            boundary_sentence_index is not None
+            and not (0 < boundary_sentence_index < len(final_sentences))
+        ):
+            boundary_sentence_index = None
+
+        if boundary_sentence_index is not None:
+            sentence_results = [
+                SentenceResult(
+                    text=sentence,
+                    isAI=idx >= boundary_sentence_index,
+                    confidence=100.0,
+                )
+                for idx, sentence in enumerate(final_sentences)
+            ]
+        else:
+            per_sentence = detector.classify_batch(final_sentences) if final_sentences else []
+            sentence_results = []
+            for idx, sentence in enumerate(final_sentences):
+                sent_probs = per_sentence[idx] if idx < len(per_sentence) else None
+                sent_confidence = (sent_probs["confidence"] * 100) if sent_probs else 100.0
+                is_ai = (sent_probs["prob_ai"] >= DECISION_THRESHOLD) if sent_probs else False
+                sentence_results.append(
+                    SentenceResult(
+                        text=sentence,
+                        isAI=is_ai,
+                        confidence=sent_confidence,
+                    )
+                )
+
+    risk_flags = ["feedback_override_exact_match"]
+    if boundary_sentence_index is not None:
+        risk_flags.append("boundary_from_manual_feedback")
+
+    if result_type == "human":
+        type_zh = "人类写作"
+    elif result_type == "ai":
+        type_zh = "AI生成"
+    else:
+        type_zh = "混合文本"
+
+    reason_summary = (
+        "该文本命中人工确认误判记忆库中的完全相同样本，因此本次直接返回历史人工确认标签，"
+        "不再沿用模型的原始顶层判定。"
+    )
+    reason_signals = [
+        "命中历史人工确认的完全相同文本",
+        f"沿用人工确认标签：{type_zh}",
+        "该覆盖仅对 exact match 生效，不对润色、续写或改写文本生效",
+    ]
+    if boundary_sentence_index is not None:
+        reason_signals.append(f"沿用历史边界信息：第 {boundary_sentence_index + 1} 句附近")
+
+    return DetectionResponse(
+        type=result_type,
+        confidence=100.0,
+        humanPercentage=human_percentage,
+        aiPercentage=ai_percentage,
+        boundary=boundary_sentence_index,
+        sentences=sentence_results,
+        tokenSpans=None,
+        processingTime=processing_time,
+        modelVersion=MODEL_VERSION,
+        decisionThreshold=DECISION_THRESHOLD,
+        riskFlags=risk_flags,
+        domainHint=override.get("domain_hint") or infer_domain_hint(text),
+        reasonSummary=reason_summary,
+        reasonSignals=reason_signals,
+        feedbackRequired=True,
+    )
+
+
 @app.post(
     "/api/detect",
     response_model=DetectionResponse,
@@ -912,6 +1168,15 @@ def detect_text(
     text = payload.text.strip()
     if not text:
         raise HTTPException(status_code=400, detail="text must not be empty")
+
+    feedback_override = lookup_feedback_override(text=text)
+    if feedback_override is not None:
+        processing_time = int((time.time() - start_time) * 1000)
+        return build_feedback_override_response(
+            text=text,
+            override=feedback_override,
+            processing_time=processing_time,
+        )
 
     cls_result = detector.classify(text)
     confidence = float(cls_result["confidence"]) * 100
@@ -1187,6 +1452,12 @@ def submit_feedback(
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except OSError as exc:
+        logger.error("[submit_feedback] failed to persist feedback: %s", exc)
+        raise HTTPException(status_code=500, detail="Feedback storage unavailable") from exc
+    except Exception as exc:
+        logger.exception("[submit_feedback] unexpected feedback submission error")
+        raise HTTPException(status_code=500, detail="Feedback submission failed") from exc
 
     return FeedbackResponse(
         status="ok",
