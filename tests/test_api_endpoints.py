@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import asyncio
 import json
+from io import BytesIO
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
 from fastapi import HTTPException
 from pydantic import ValidationError
+from starlette.datastructures import UploadFile
 from starlette.requests import Request
 
 import api.api as api_module
@@ -387,6 +390,222 @@ class TestChatEndpoint:
     def test_chat_empty_messages_rejected(self):
         with pytest.raises(ValidationError):
             api_module.ChatRequest(messages=[])
+
+
+class TestProjectQAEndpoint:
+    """POST /api/project-qa"""
+
+    def test_project_qa_returns_extractive_answer(self, api_context, monkeypatch):
+        fake_hits = [
+            SimpleNamespace(
+                chunk=SimpleNamespace(path="docs/project/DEFENSE_CURRENT_STATUS.md"),
+                score=0.91,
+                excerpt="三集平均准确率 98.56%，当前推荐模型为 bert_v11c_boundary_fix。",
+            )
+        ]
+
+        monkeypatch.setattr(
+            api_module,
+            "get_project_knowledge_index",
+            lambda force_refresh=False: SimpleNamespace(
+                search=lambda question, top_k: fake_hits,
+                source_count=18,
+            ),
+        )
+        monkeypatch.setattr(
+            api_module,
+            "build_extractive_answer",
+            lambda question, hits: "根据仓库资料，当前三集平均准确率为 98.56%。",
+        )
+
+        response = asyncio.run(
+            api_module.project_qa(
+                api_module.ProjectQARequest(question="当前三集平均准确率是多少", useLLM=False),
+                make_request(),
+                authorization=None,
+                x_internal_token=None,
+            )
+        )
+
+        assert response.mode == "extractive"
+        assert response.answer == "根据仓库资料，当前三集平均准确率为 98.56%。"
+        assert response.agentMode == "metrics"
+        assert response.answerFrame == "指标口径答辩"
+        assert response.answerLength == "standard"
+        assert response.speakingStyle == "natural"
+        assert response.effectiveSpeakerProfile is not None
+        assert response.sourceCount == 1
+        assert response.indexSourceCount == 18
+        assert response.sources[0].path == "docs/project/DEFENSE_CURRENT_STATUS.md"
+        assert any(item.tool == "repository_search" for item in response.toolTrace)
+        assert response.suggestedQuestions
+
+    def test_project_qa_uses_llm_when_available(self, api_context, monkeypatch):
+        fake_hits = [
+            SimpleNamespace(
+                chunk=SimpleNamespace(path="docs/project/DEFENSE_CURRENT_STATUS.md"),
+                score=0.91,
+                excerpt="三集平均准确率 98.56%，当前推荐模型为 bert_v11c_boundary_fix。",
+            )
+        ]
+
+        monkeypatch.setattr(
+            api_module,
+            "get_project_knowledge_index",
+            lambda force_refresh=False: SimpleNamespace(
+                search=lambda question, top_k: fake_hits,
+                source_count=18,
+            ),
+        )
+        monkeypatch.setattr(
+            api_module,
+            "build_extractive_answer",
+            lambda question, hits: "extractive fallback",
+        )
+        monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+
+        class FakeResponse:
+            status_code = 200
+
+            @staticmethod
+            def json():
+                return {
+                    "model": "mock-rag-model",
+                    "choices": [{"message": {"content": "这是基于仓库证据生成的答辩回答。"}}],
+                }
+
+        class FakeAsyncClient:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc, tb):
+                return None
+
+            async def post(self, url, headers=None, json=None):
+                return FakeResponse()
+
+        monkeypatch.setattr(api_module.httpx, "AsyncClient", FakeAsyncClient)
+
+        response = asyncio.run(
+            api_module.project_qa(
+                api_module.ProjectQARequest(
+                    question="当前推荐模型是什么",
+                    answerLength="brief",
+                    speakingStyle="confident",
+                    speakerProfile="我是计算机专业本科生，正在做毕设答辩。",
+                ),
+                make_request(),
+                authorization=None,
+                x_internal_token=None,
+            )
+        )
+
+        assert response.mode == "rag"
+        assert response.model == "mock-rag-model"
+        assert response.answer == "这是基于仓库证据生成的答辩回答。"
+        assert response.answerFrame == "标准答辩口径"
+        assert response.answerLength == "brief"
+        assert response.speakingStyle == "confident"
+        assert response.effectiveSpeakerProfile == "我是计算机专业本科生，正在做毕设答辩。"
+        assert any(item.tool == "llm_synthesis" and item.status == "used" for item in response.toolTrace)
+
+    def test_project_qa_uses_history_and_live_detector(self, api_context, monkeypatch):
+        fake_hits = [
+            SimpleNamespace(
+                chunk=SimpleNamespace(path="docs/thesis/project_technical_deep_dive.md"),
+                score=0.77,
+                excerpt="双层检测架构由分类器和边界检测器组成。",
+            )
+        ]
+
+        monkeypatch.setattr(
+            api_module,
+            "get_project_knowledge_index",
+            lambda force_refresh=False: SimpleNamespace(
+                search=lambda question, top_k: fake_hits,
+                source_count=24,
+            ),
+        )
+        monkeypatch.setattr(
+            api_module,
+            "build_extractive_answer",
+            lambda question, hits: "根据现有证据，系统采用双层检测架构。",
+        )
+
+        response = asyncio.run(
+            api_module.project_qa(
+                api_module.ProjectQARequest(
+                    question="继续上一个问题，为什么还要保留边界检测器？",
+                    useLLM=False,
+                    history=[
+                        {"role": "user", "content": "这个项目的整体架构是什么？"},
+                        {"role": "assistant", "content": "系统采用双层检测架构。"},
+                    ],
+                    analysisText="我先写一段，再让 AI 续写后半段。",
+                ),
+                make_request(),
+                authorization=None,
+                x_internal_token=None,
+            )
+        )
+
+        assert response.agentMode == "technical"
+        assert response.answerFrame == "原理解释链"
+        assert response.memorySummary is not None
+        assert any(item.tool == "conversation_memory" for item in response.toolTrace)
+        assert any(item.tool == "live_detector" and item.status == "used" for item in response.toolTrace)
+
+
+class TestProjectQAMaterialsEndpoint:
+    """GET/POST /api/project-qa/materials"""
+
+    def test_upload_and_list_project_qa_materials(self, api_context, tmp_path, monkeypatch):
+        monkeypatch.setenv("DC_PROJECT_QA_UPLOAD_DIR", str(tmp_path))
+        monkeypatch.setattr(api_module, "get_project_knowledge_index", lambda force_refresh=False: SimpleNamespace())
+
+        upload = UploadFile(filename="答辩提纲.md", file=BytesIO("核心创新点\n边界检测".encode("utf-8")))
+
+        upload_response = asyncio.run(
+            api_module.upload_project_qa_materials(
+                make_request(),
+                files=[upload],
+                x_internal_token=None,
+            )
+        )
+
+        assert upload_response.status == "ok"
+        assert len(upload_response.uploaded) == 1
+        assert upload_response.uploaded[0].sourceType == "md"
+
+        list_response = asyncio.run(
+            api_module.list_project_qa_materials(
+                make_request(),
+                x_internal_token=None,
+            )
+        )
+
+        assert list_response.total == 1
+        assert list_response.materials[0].name.endswith(".md")
+
+    def test_upload_project_qa_material_rejects_unsupported_file(self, api_context, tmp_path, monkeypatch):
+        monkeypatch.setenv("DC_PROJECT_QA_UPLOAD_DIR", str(tmp_path))
+        monkeypatch.setattr(api_module, "get_project_knowledge_index", lambda force_refresh=False: SimpleNamespace())
+
+        upload = UploadFile(filename="notes.exe", file=BytesIO(b"binary"))
+
+        response = asyncio.run(
+            api_module.upload_project_qa_materials(
+                make_request(),
+                files=[upload],
+                x_internal_token=None,
+            )
+        )
+
+        assert response.uploaded == []
+        assert response.skipped
 
 
 class TestModelInfoEndpoint:

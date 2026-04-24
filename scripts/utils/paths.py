@@ -60,6 +60,24 @@ class _Paths:
     def hybrid_dir(self) -> Path:
         return self.datasets_dir / "mixed" / "hybrid"
 
+    @property
+    def feedback_loop_dir(self) -> Path:
+        return self.datasets_dir / "feedback_loop"
+
+    @property
+    def feedback_confirmations(self) -> Path:
+        return self.feedback_loop_dir / "confirmations.jsonl"
+
+    @property
+    def feedback_corrections(self) -> Path:
+        return self.feedback_loop_dir / "misclassified_samples.jsonl"
+
+    @property
+    def project_qa_uploads_dir(self) -> Path:
+        return Path(
+            os.getenv("DC_PROJECT_QA_UPLOAD_DIR", self.datasets_dir / "project_qa_uploads")
+        )
+
     # -- Models ----------------------------------------------------------
     @property
     def models_dir(self) -> Path:

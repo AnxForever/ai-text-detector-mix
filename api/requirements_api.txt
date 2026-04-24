@@ -5,6 +5,7 @@
 fastapi==0.129.0
 uvicorn[standard]==0.40.0
 pydantic==2.12.5
+python-multipart==0.0.20
 
 # Deep learning (inference only)
 torch==2.10.0
@@ -12,3 +13,6 @@ transformers==5.1.0
 
 # HTTP client (for OpenAI-compatible proxy)
 requests==2.32.5
+
+# Document ingestion for project-qa uploaded materials
+pypdf==5.4.0

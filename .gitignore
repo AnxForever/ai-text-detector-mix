@@ -76,6 +76,7 @@ datasets/generated/
 datasets/logs/
 datasets/planning/
 datasets/external/
+datasets/project_qa_uploads/
 
 # 特殊文件
 Antigravity.exe

@@ -7,6 +7,7 @@ services:
       - ./models:/app/models:ro
       - ./api/api.py:/app/api.py:ro
       - ./datasets/feedback_loop:/app/datasets/feedback_loop
+      - ./datasets/project_qa_uploads:/app/datasets/project_qa_uploads
     env_file:
       - .env.deploy
     environment:

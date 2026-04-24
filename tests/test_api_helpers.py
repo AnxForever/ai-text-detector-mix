@@ -14,9 +14,11 @@ from fastapi import HTTPException
 from api.api import (
     build_reason_analysis,
     collect_risk_flags,
+    ensure_detector_loaded,
     get_client_ip,
     infer_domain_hint,
     resolve_api_key,
+    run_project_agent_live_detection,
     split_sentences,
     verify_internal_token,
 )
@@ -257,6 +259,41 @@ class TestVerifyInternalToken:
         with pytest.raises(HTTPException) as exc_info:
             verify_internal_token(None)
         assert exc_info.value.status_code == 401
+
+
+# =========================================================================
+# project agent live detector
+# =========================================================================
+class TestProjectAgentLiveDetector:
+    """Lazy detector loading for project copilot text analysis."""
+
+    def test_ensure_detector_loaded_returns_existing_detector(self, monkeypatch):
+        sentinel = object()
+        monkeypatch.setattr("api.api.detector", sentinel)
+        assert ensure_detector_loaded() is sentinel
+
+    def test_run_project_agent_live_detection_can_lazy_init(self, monkeypatch):
+        class FakeDetector:
+            def classify(self, text):
+                return {
+                    "label": "AI",
+                    "confidence": 0.91,
+                    "prob_ai": 0.91,
+                    "prob_human": 0.09,
+                }
+
+            def detect_boundary(self, text):
+                return {"boundary_char": 12}
+
+        monkeypatch.setattr("api.api.detector", None)
+        monkeypatch.setattr("api.api.HybridTextDetector", lambda: FakeDetector())
+        monkeypatch.setattr("api.api.SPAN_TRIGGER_MIN_CHARS", 0)
+
+        summary = run_project_agent_live_detection("前半段像人写的，后半段更像AI。")
+
+        assert summary is not None
+        assert "实时检测结果" in summary
+        assert "边界字符位置" in summary
 
 
 # =========================================================================
