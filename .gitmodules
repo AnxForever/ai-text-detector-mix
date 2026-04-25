@@ -1,0 +1,3 @@
+[submodule "datasets/raw/MGTBench"]
+	path = datasets/raw/MGTBench
+	url = https://github.com/xinleihe/MGTBench.git
