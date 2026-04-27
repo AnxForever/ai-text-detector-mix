@@ -3089,6 +3089,16 @@ async def project_qa_stream(
 
     async def event_stream():
         try:
+            if not payload.forceRefresh:
+                cached = _qa_cache_get(payload)
+                if cached is not None:
+                    yield encode_project_qa_stream_event("status", message="命中缓存，直接返回")
+                    yield encode_project_qa_stream_event(
+                        "answer_delta", delta=cached.get("answer", "")
+                    )
+                    yield encode_project_qa_stream_event("final", response=cached)
+                    return
+
             yield encode_project_qa_stream_event("status", message="正在检索仓库资料")
             context = await prepare_project_qa_context(payload, question)
             for trace in context["tool_trace"]:
@@ -3345,9 +3355,11 @@ async def project_qa_stream(
             effective_sid = context.get("effective_session_id")
             if effective_sid and answer:
                 save_session_turn(effective_sid, "assistant", answer)
+            response_data = response_payload.model_dump(exclude_none=True)
+            _qa_cache_put(payload, response_data)
             yield encode_project_qa_stream_event(
                 "final",
-                response=response_payload.model_dump(exclude_none=True),
+                response=response_data,
             )
         except HTTPException as exc:
             yield encode_project_qa_stream_event("error", message=exc.detail)
