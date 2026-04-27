@@ -2709,6 +2709,195 @@ def merge_session_history(
     return combined[-SESSION_MAX_TURNS:], sid
 
 
+# ---------------------------------------------------------------------------
+# Agent retrieval loop: multi-round retrieval with query decomposition
+# ---------------------------------------------------------------------------
+AGENT_MAX_RETRIEVAL_ROUNDS = int(os.getenv("DC_AGENT_MAX_ROTRIEVAL_ROUNDS", "2"))
+AGENT_EVIDENCE_MIN_HITS = int(os.getenv("DC_AGENT_EVIDENCE_MIN_HITS", "3"))
+AGENT_EVIDENCE_TOP_SCORE = float(os.getenv("DC_AGENT_EVIDENCE_TOP_SCORE", "0.3"))
+AGENT_ENABLE_SELFCHECK = os.getenv("DC_AGENT_ENABLE_SELFCHECK", "0").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+}
+
+
+async def _decompose_question(question: str) -> list[str]:
+    """Use LLM to split a complex question into 2-3 focused sub-queries."""
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        return []
+    api_base = os.getenv("OPENAI_BASE_URL", "https://api.hotaruapi.top/v1")
+    model_name = DEFAULT_CHAT_MODEL.strip()
+    if not model_name:
+        return []
+    try:
+        async with httpx.AsyncClient(timeout=8) as client:
+            resp = await client.post(
+                f"{api_base}/chat/completions",
+                headers=build_upstream_chat_headers(api_key),
+                json={
+                    "model": model_name,
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": (
+                                "你是查询分解器。将用户的复杂问题拆成 2-3 个独立子查询，"
+                                "每个子查询覆盖原问题的一个方面。每行一个子查询，不要编号，不要解释。"
+                                "如果问题本身已经足够简单，直接原样输出即可。"
+                            ),
+                        },
+                        {"role": "user", "content": question[:300]},
+                    ],
+                    "temperature": 0.1,
+                    "max_tokens": 150,
+                },
+            )
+        if resp.status_code != 200:
+            return []
+        text = resp.json().get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+        if not text:
+            return []
+        lines = [line.strip().lstrip("0123456789.-) ") for line in text.split("\n") if line.strip()]
+        return [line for line in lines if len(line) >= 4][:3]
+    except Exception:
+        return []
+
+
+def _evidence_sufficient(question: str, hits: list[KnowledgeHit]) -> bool:
+    """Check if current retrieval results are sufficient to answer the question."""
+    if len(hits) >= AGENT_EVIDENCE_MIN_HITS and hits and hits[0].score >= AGENT_EVIDENCE_TOP_SCORE:
+        return True
+    if len(hits) >= AGENT_EVIDENCE_MIN_HITS * 2:
+        return True
+    return False
+
+
+def _deduplicate_hits(hits: list[KnowledgeHit]) -> list[KnowledgeHit]:
+    """Remove duplicate hits (same path + similar content), keeping highest score."""
+    seen: dict[str, KnowledgeHit] = {}
+    for hit in hits:
+        chunk_content = getattr(hit.chunk, "content", "") or ""
+        key = f"{hit.chunk.path}:{chunk_content[:80]}"
+        if key not in seen or hit.score > seen[key].score:
+            seen[key] = hit
+    return sorted(seen.values(), key=lambda h: h.score, reverse=True)
+
+
+async def agent_retrieve_loop(
+    question: str,
+    knowledge_index: Any,
+    top_k: int = 5,
+) -> tuple[list[KnowledgeHit], list[ProjectQAToolTrace]]:
+    """Multi-round retrieval: original query → check → decompose → re-retrieve."""
+    all_traces: list[ProjectQAToolTrace] = []
+
+    # Round 1: Direct retrieval with the original question
+    hits = knowledge_index.search(question, top_k=top_k)
+    all_traces.append(
+        ProjectQAToolTrace(
+            tool="repository_search",
+            status="used" if hits else "skipped",
+            detail=f"命中 {len(hits)} 个仓库证据片段",
+        )
+    )
+
+    if _evidence_sufficient(question, hits) or AGENT_MAX_RETRIEVAL_ROUNDS < 2:
+        return _deduplicate_hits(hits)[:top_k], all_traces
+
+    # Round 2: Decompose and re-retrieve
+    sub_queries = await _decompose_question(question)
+    if not sub_queries:
+        all_traces.append(
+            ProjectQAToolTrace(
+                tool="query_decomposition",
+                status="skipped",
+                detail="LLM 分解不可用或返回为空，使用第一轮结果",
+            )
+        )
+        return _deduplicate_hits(hits)[:top_k], all_traces
+
+    all_traces.append(
+        ProjectQAToolTrace(
+            tool="query_decomposition",
+            status="used",
+            detail=f"将问题分解为 {len(sub_queries)} 个子查询：{' / '.join(sq[:20] for sq in sub_queries)}",
+        )
+    )
+
+    sub_top_k = max(3, top_k // 2)
+    for sq in sub_queries:
+        sub_hits = knowledge_index.search(sq, top_k=sub_top_k)
+        hits.extend(sub_hits)
+
+    all_traces.append(
+        ProjectQAToolTrace(
+            tool="retrieval_round_2",
+            status="used",
+            detail=f"子查询补充检索后共 {len(hits)} 个片段（去重前）",
+        )
+    )
+
+    return _deduplicate_hits(hits)[:top_k], all_traces
+
+
+async def selfcritique_answer(
+    question: str, answer: str, evidence_blocks: list[str]
+) -> dict[str, Any] | None:
+    """LLM-based answer quality check: grounded, factual, complete."""
+    if not AGENT_ENABLE_SELFCHECK:
+        return None
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        return None
+    api_base = os.getenv("OPENAI_BASE_URL", "https://api.hotaruapi.top/v1")
+    model_name = DEFAULT_CHAT_MODEL.strip()
+    if not model_name:
+        return None
+    evidence_text = "\n".join(evidence_blocks[:3])[:1500]
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.post(
+                f"{api_base}/chat/completions",
+                headers=build_upstream_chat_headers(api_key),
+                json={
+                    "model": model_name,
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": (
+                                "你是回答质量审核员。根据给定证据评估回答质量。"
+                                '输出 JSON：{"grounded": true/false, "hallucination_risk": "low/medium/high", '
+                                '"completeness": "sufficient/partial/insufficient", "issue": "问题描述或null"}。'
+                                "只输出 JSON，不要解释。"
+                            ),
+                        },
+                        {
+                            "role": "user",
+                            "content": (
+                                f"问题：{question}\n\n"
+                                f"回答：{answer[:1000]}\n\n"
+                                f"证据：{evidence_text}"
+                            ),
+                        },
+                    ],
+                    "temperature": 0.0,
+                    "max_tokens": 120,
+                },
+            )
+        if resp.status_code != 200:
+            return None
+        text = resp.json().get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+        if not text:
+            return None
+        # Strip markdown code fences if present
+        if text.startswith("```"):
+            text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+        return json.loads(text)
+    except (json.JSONDecodeError, Exception):
+        return None
+
+
 async def prepare_project_qa_context(payload: ProjectQARequest, question: str) -> dict[str, Any]:
     """Assemble reusable project QA context shared by normal and streaming endpoints."""
     merged_history, effective_session_id = merge_session_history(payload)
@@ -2724,19 +2913,15 @@ async def prepare_project_qa_context(payload: ProjectQARequest, question: str) -
     history_summary = summarize_project_agent_history(merged_history)
 
     knowledge_index = get_project_knowledge_index(force_refresh=payload.forceRefresh)
-    hits = knowledge_index.search(question, top_k=payload.topK)
+    hits, retrieval_traces = await agent_retrieve_loop(
+        question, knowledge_index, top_k=payload.topK
+    )
     evidence_blocks = build_project_agent_evidence_blocks(hits)
     sources = [
         ProjectQASource(path=hit.chunk.path, score=round(hit.score, 4), excerpt=hit.excerpt)
         for hit in hits
     ]
-    tool_trace: list[ProjectQAToolTrace] = [
-        ProjectQAToolTrace(
-            tool="repository_search",
-            status="used" if sources else "skipped",
-            detail=f"命中 {len(sources)} 个仓库证据片段",
-        )
-    ]
+    tool_trace: list[ProjectQAToolTrace] = list(retrieval_traces)
 
     if history_summary:
         tool_trace.append(
@@ -3184,6 +3369,20 @@ async def project_qa(
             )
         )
 
+    critique = await selfcritique_answer(question, answer, context["evidence_blocks"])
+    if critique:
+        context["tool_trace"].append(
+            ProjectQAToolTrace(
+                tool="answer_selfcritique",
+                status="used",
+                detail=(
+                    f"回答自检：grounded={critique.get('grounded')}, "
+                    f"hallucination_risk={critique.get('hallucination_risk')}, "
+                    f"completeness={critique.get('completeness')}"
+                ),
+            )
+        )
+
     effective_sid = context.get("effective_session_id")
     if effective_sid and answer:
         save_session_turn(effective_sid, "assistant", answer)
@@ -3483,6 +3682,22 @@ async def project_qa_stream(
                 model_label=model_label,
                 start_time=start_time,
             )
+            critique = await selfcritique_answer(question, answer, context["evidence_blocks"])
+            if critique:
+                context["tool_trace"].append(
+                    ProjectQAToolTrace(
+                        tool="answer_selfcritique",
+                        status="used",
+                        detail=(
+                            f"回答自检：grounded={critique.get('grounded')}, "
+                            f"hallucination_risk={critique.get('hallucination_risk')}, "
+                            f"completeness={critique.get('completeness')}"
+                        ),
+                    )
+                )
+                yield encode_project_qa_stream_event(
+                    "trace", trace=context["tool_trace"][-1].model_dump()
+                )
             effective_sid = context.get("effective_session_id")
             if effective_sid and answer:
                 save_session_turn(effective_sid, "assistant", answer)
