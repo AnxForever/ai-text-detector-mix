@@ -2147,33 +2147,60 @@ def run_project_agent_live_detection(text: str) -> str | None:
     )
 
 
+_SUGGESTION_POOL: dict[str, list[str]] = {
+    "defense": [
+        "本项目的研究目标、方法与应用价值分别是什么？",
+        "本文的核心创新点可以概括为哪三点？",
+        "该系统的实际应用场景和工程价值体现在哪里？",
+        "如果老师不懂技术，你怎么一句话讲清楚这个项目？",
+        "你的数据是怎么构建的？覆盖了哪些模型和来源？",
+    ],
+    "technical": [
+        "为什么 [SEP] 边界标记能够提升混合文本检测效果？",
+        "为什么本文选择 BERT 而不是 GPT / LLaMA 一类生成模型？",
+        "双层检测架构中，分类器与边界检测器分别承担什么作用？",
+        "为什么不直接用零样本方法或水印检测？",
+        "最大长度设为 256 是怎么决定的？",
+    ],
+    "metrics": [
+        "V11c 相比 V10 的性能提升主要来自哪些因素？",
+        "Temperature Scaling 与 ECE 在本文中分别说明什么？",
+        "当前推荐模型的核心指标有哪些，它们分别代表什么？",
+        "98.69% 和 98.56% 这两个数字为什么都出现？",
+        "99.28% 的召回率意味着什么？",
+    ],
+    "critical": [
+        "本项目目前的主要局限性是什么？",
+        "数据集设计如何支撑跨模型泛化能力评估？",
+        "如果面对分布外新模型，当前方法可能出现哪些风险？",
+        "你怎么证明这不是过拟合？",
+        "准确率这么高，不会是数据泄露吗？",
+    ],
+}
+
+_FOLLOWUP_POOL = [
+    "能展开讲讲数据治理具体做了什么吗？",
+    "对比一下你的方法和 BERT-BiGRU 的区别？",
+    "混合文本检测的边界定位准确率如何？",
+    "如果换成英文文本，当前方法还能直接用吗？",
+    "在误报和漏报之间，本文是如何取舍的？",
+    "你这个系统到底能不能真正拿来用？",
+]
+
+
 def build_project_agent_suggestions(
     agent_mode: Literal["defense", "technical", "metrics", "critical"],
+    asked_questions: list[str] | None = None,
 ) -> list[str]:
-    """Return useful next-question suggestions for the current agent mode."""
-    suggestions = {
-        "defense": [
-            "本项目的研究目标、方法与应用价值分别是什么？",
-            "本文的核心创新点可以概括为哪三点？",
-            "该系统的实际应用场景和工程价值体现在哪里？",
-        ],
-        "technical": [
-            "为什么 [SEP] 边界标记能够提升混合文本检测效果？",
-            "为什么本文选择 BERT 而不是 GPT / LLaMA 一类生成模型？",
-            "双层检测架构中，分类器与边界检测器分别承担什么作用？",
-        ],
-        "metrics": [
-            "V11c 相比 V10 的性能提升主要来自哪些因素？",
-            "Temperature Scaling 与 ECE 在本文中分别说明什么？",
-            "当前推荐模型的核心指标有哪些，它们分别代表什么？",
-        ],
-        "critical": [
-            "本项目目前的主要局限性是什么？",
-            "数据集设计如何支撑跨模型泛化能力评估？",
-            "如果面对分布外新模型，当前方法可能出现哪些风险？",
-        ],
-    }
-    return suggestions[agent_mode]
+    """Return context-aware next-question suggestions."""
+    pool = list(_SUGGESTION_POOL.get(agent_mode, _SUGGESTION_POOL["defense"]))
+    asked_lower = {q.strip().lower() for q in (asked_questions or [])}
+    pool = [s for s in pool if s.strip().lower() not in asked_lower]
+    followups = [f for f in _FOLLOWUP_POOL if f.strip().lower() not in asked_lower]
+    result = pool[:2]
+    if followups:
+        result.append(followups[0])
+    return result or _SUGGESTION_POOL[agent_mode][:3]
 
 
 def select_project_answer_frame(
@@ -2210,6 +2237,43 @@ def select_project_answer_frame(
         return (
             "承认-解释-改进",
             "回答结构：先承认问题；再说明证据和原因；最后给出当前补救和未来改进。",
+        )
+    if any(token in lowered for token in ("对比", "比较", "区别", "差异", "vs", "和.*比")):
+        return (
+            "方案对比答辩",
+            "回答结构：先说对比维度；再逐维度分析差异；最后给出选型结论和取舍说明。",
+        )
+    if any(
+        token in lowered for token in ("数据治理", "数据清洗", "训练集", "v10", "v11", "数据中心")
+    ):
+        return (
+            "数据治理答辩",
+            "回答结构：先说问题（标签噪声/弱域覆盖/长文缺失）；再说做了什么（清/补/修）；最后说效果（控制变量实验结果）。",
+        )
+    if any(token in lowered for token in ("跨模型", "泛化", "新模型", "gpt-4", "gpt-5", "llama")):
+        return (
+            "泛化能力答辩",
+            "回答结构：先说训练覆盖范围；再说独立评估集证据；最后说已知边界和持续扩展计划。",
+        )
+    if any(token in lowered for token in ("演示", "展示", "跑一下", "试一下", "现场检测")):
+        return (
+            "工程演示引导",
+            "回答结构：简述系统能力 -> 指出演示入口 -> 说明预期结果 -> 补充边界情况。",
+        )
+    if any(
+        token in lowered
+        for token in (
+            "边界定位准确率",
+            "span检测",
+            "混合文本检测",
+            "续写检测",
+            "边界标记机制",
+            "边界机制",
+        )
+    ):
+        return (
+            "边界检测答辩",
+            "回答结构：先说双层架构动机；再讲 [SEP] 机制原理；最后报边界定位指标和适用场景。",
         )
     if agent_mode == "defense":
         return (
@@ -2553,6 +2617,7 @@ def build_project_answer_evidence_references(
 # ---------------------------------------------------------------------------
 SESSION_DIR = Path(os.getenv("DC_SESSION_DIR", str(PROJECT_ROOT / "sessions")))
 SESSION_MAX_TURNS = 20
+SESSION_TTL_SECONDS = int(os.getenv("DC_SESSION_TTL_SECONDS", "86400"))
 _SESSION_LOCKS: dict[str, Lock] = defaultdict(Lock)
 _safe_session_id_re = re.compile(r"^[a-zA-Z0-9_-]{4,64}$")
 
@@ -2583,6 +2648,40 @@ def load_session_history(session_id: str) -> list[dict[str, str]]:
     except (OSError, json.JSONDecodeError):
         return []
     return turns[-SESSION_MAX_TURNS:]
+
+
+def cleanup_expired_sessions() -> int:
+    """Remove session files older than SESSION_TTL_SECONDS. Returns count removed."""
+    if not SESSION_DIR.exists():
+        return 0
+    now = time.time()
+    removed = 0
+    for path in SESSION_DIR.glob("*.jsonl"):
+        if now - path.stat().st_mtime > SESSION_TTL_SECONDS:
+            path.unlink(missing_ok=True)
+            removed += 1
+    return removed
+
+
+def list_active_sessions() -> list[dict[str, Any]]:
+    """Return metadata for all non-expired session files."""
+    if not SESSION_DIR.exists():
+        return []
+    now = time.time()
+    sessions: list[dict[str, Any]] = []
+    for path in sorted(SESSION_DIR.glob("*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True):
+        mtime = path.stat().st_mtime
+        if now - mtime > SESSION_TTL_SECONDS:
+            continue
+        turns = load_session_history(path.stem)
+        sessions.append(
+            {
+                "sessionId": path.stem,
+                "turnCount": len(turns),
+                "lastActivity": datetime.fromtimestamp(mtime).isoformat(),
+            }
+        )
+    return sessions[:50]
 
 
 def save_session_turn(session_id: str, role: str, content: str) -> None:
@@ -2710,7 +2809,12 @@ async def prepare_project_qa_context(payload: ProjectQARequest, question: str) -
         "sources": sources,
         "speaker_profile": speaker_profile,
         "speaking_style_instruction": speaking_style_instruction,
-        "suggested_questions": build_project_agent_suggestions(agent_mode),
+        "suggested_questions": build_project_agent_suggestions(
+            agent_mode,
+            asked_questions=[
+                m.get("content", "") for m in merged_history if m.get("role") == "user"
+            ],
+        ),
         "tool_trace": tool_trace,
     }
 
@@ -2817,6 +2921,33 @@ async def list_project_qa_materials(
 
     materials = [build_project_material_record(path) for path in list_uploaded_project_sources()]
     return ProjectQAMaterialListResponse(total=len(materials), materials=materials)
+
+
+@app.get("/api/project-qa/sessions")
+async def list_sessions(
+    http_request: Request,
+    x_internal_token: str | None = Header(default=None, alias="X-Internal-Token"),
+) -> dict[str, Any]:
+    verify_internal_token(x_internal_token)
+    cleanup_expired_sessions()
+    return {"sessions": list_active_sessions()}
+
+
+@app.delete("/api/project-qa/sessions/{session_id}")
+async def delete_session(
+    session_id: str,
+    http_request: Request,
+    x_internal_token: str | None = Header(default=None, alias="X-Internal-Token"),
+) -> dict[str, str]:
+    verify_internal_token(x_internal_token)
+    if not _is_safe_session_id(session_id):
+        raise HTTPException(status_code=400, detail="Invalid session ID")
+    path = _session_path(session_id)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Session not found")
+    path.unlink()
+    _SESSION_LOCKS.pop(session_id, None)
+    return {"status": "ok", "deletedSession": session_id}
 
 
 @app.post(
