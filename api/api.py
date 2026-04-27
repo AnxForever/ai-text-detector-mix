@@ -1,5 +1,5 @@
-import json
 import hashlib
+import json
 import logging
 import os
 import re
@@ -11,23 +11,29 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 from threading import Lock
-from typing import Any, Literal
+from typing import Any, Literal, cast
+from urllib.parse import urlparse
 
 import httpx
 import torch
 import uvicorn
 from fastapi import FastAPI, Header, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 try:
-    from transformers import BertForSequenceClassification, BertForTokenClassification, BertTokenizer
+    from transformers import (
+        BertForSequenceClassification,
+        BertForTokenClassification,
+        BertTokenizer,
+    )
 except ImportError:  # pragma: no cover - exercised only in lean test envs
     BertForSequenceClassification = None
     BertForTokenClassification = None
     BertTokenizer = None
 
-from scripts.utils.paths import PATHS
+from scripts.utils.paths import PATHS, PROJECT_ROOT
 from scripts.utils.project_qa import (
     KnowledgeHit,
     ProjectKnowledgeIndex,
@@ -63,6 +69,8 @@ DEFAULT_DEFENSE_PROFILE = os.getenv(
     "PROJECT_DEFENSE_PROFILE",
     "我是西安科技大学计算机科学与技术专业本科生包安心，正在做中文AI文本检测方向的毕业设计答辩。",
 )
+PROJECT_QA_MODEL_PRESETS_RAW = os.getenv("PROJECT_QA_MODEL_PRESETS", "").strip()
+PROJECT_QA_DEFAULT_PRESET_ID_ENV = os.getenv("PROJECT_QA_DEFAULT_PRESET_ID", "").strip()
 
 
 def _load_classifier_metrics(model_path: str) -> dict[str, Any]:
@@ -139,6 +147,114 @@ ENFORCE_INTERNAL_TOKEN = os.getenv("ENFORCE_INTERNAL_TOKEN", "1").strip().lower(
 }
 INTERNAL_API_TOKEN = os.getenv("INTERNAL_API_TOKEN", "").strip()
 
+
+def infer_provider_label(api_base: str, model_name: str, fallback_label: str | None = None) -> str:
+    """Infer a short provider label from api base or model name."""
+    if fallback_label:
+        return fallback_label
+
+    api_base_lower = api_base.lower()
+    model_lower = model_name.lower()
+    if "moonshot" in model_lower or "kimi" in model_lower:
+        return "Moonshot"
+    if "glm" in model_lower or "zai" in model_lower:
+        return "智谱"
+    if "qwen" in model_lower:
+        return "通义千问"
+    if "deepseek" in model_lower:
+        return "DeepSeek"
+    if "claude" in model_lower:
+        return "Anthropic"
+    if "openai" in model_lower or "gpt" in model_lower:
+        return "OpenAI"
+
+    parsed = urlparse(api_base)
+    if parsed.netloc:
+        return parsed.netloc
+    return "默认提供方"
+
+
+def load_project_qa_model_presets() -> list[dict[str, str]]:
+    """Load project QA model presets from env, with a default fallback preset."""
+    fallback_preset = {
+        "id": "default",
+        "label": "默认模型",
+        "api_base": os.getenv("OPENAI_BASE_URL", "https://api.hotaruapi.top/v1").strip(),
+        "api_key": os.getenv("OPENAI_API_KEY", "").strip(),
+        "model": DEFAULT_CHAT_MODEL.strip(),
+        "provider": infer_provider_label(
+            os.getenv("OPENAI_BASE_URL", "https://api.hotaruapi.top/v1").strip(),
+            DEFAULT_CHAT_MODEL.strip(),
+        ),
+    }
+
+    if not PROJECT_QA_MODEL_PRESETS_RAW:
+        return [fallback_preset]
+
+    presets: list[dict[str, str]] = []
+    for raw_entry in PROJECT_QA_MODEL_PRESETS_RAW.split(";"):
+        entry = raw_entry.strip()
+        if not entry:
+            continue
+        parts = [part.strip() for part in entry.split("|")]
+        if len(parts) < 5:
+            logger.warning("Skipping invalid PROJECT_QA_MODEL_PRESETS entry: %s", entry)
+            continue
+
+        preset_id, label, api_base, api_key, model_name, *rest = parts
+        if not preset_id or not label or not api_base or not api_key or not model_name:
+            logger.warning("Skipping incomplete PROJECT_QA_MODEL_PRESETS entry: %s", entry)
+            continue
+
+        provider = infer_provider_label(api_base, model_name, rest[0] if rest else None)
+        presets.append(
+            {
+                "id": preset_id,
+                "label": label,
+                "api_base": api_base,
+                "api_key": api_key,
+                "model": model_name,
+                "provider": provider,
+            }
+        )
+
+    if not presets:
+        return [fallback_preset]
+    return presets
+
+
+PROJECT_QA_MODEL_PRESETS = load_project_qa_model_presets()
+PROJECT_QA_MODEL_PRESET_MAP = {preset["id"]: preset for preset in PROJECT_QA_MODEL_PRESETS}
+
+
+def resolve_project_qa_default_preset_id() -> str:
+    """Return the default preset id used by the project QA agent."""
+    if PROJECT_QA_DEFAULT_PRESET_ID_ENV in PROJECT_QA_MODEL_PRESET_MAP:
+        return PROJECT_QA_DEFAULT_PRESET_ID_ENV
+    return PROJECT_QA_MODEL_PRESETS[0]["id"]
+
+
+PROJECT_QA_DEFAULT_PRESET_ID = resolve_project_qa_default_preset_id()
+
+
+def resolve_project_qa_model_preset(requested_preset_id: str | None) -> dict[str, str]:
+    """Resolve the requested project QA model preset or fall back to default."""
+    preset_id = (requested_preset_id or "").strip()
+    if preset_id and preset_id in PROJECT_QA_MODEL_PRESET_MAP:
+        return PROJECT_QA_MODEL_PRESET_MAP[preset_id]
+    return PROJECT_QA_MODEL_PRESET_MAP[PROJECT_QA_DEFAULT_PRESET_ID]
+
+
+def build_upstream_chat_headers(api_key: str) -> dict[str, str]:
+    """Build stable upstream headers for OpenAI-compatible providers."""
+    return {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": "Mozilla/5.0 (compatible; DefenseCopilot/1.0; +https://www.baxfor.fun)",
+    }
+
+
 INCLUDE_RISK_OBSERVABILITY = os.getenv(
     "DETECTOR_INCLUDE_RISK_OBSERVABILITY", "0"
 ).strip().lower() in {"1", "true", "yes", "on"}
@@ -155,6 +271,13 @@ TEMPLATE_LIKE_PATTERN = re.compile(
 RATE_LIMIT_STATE: dict[str, deque[float]] = defaultdict(deque)
 RATE_LIMIT_LOCK = Lock()
 FEEDBACK_WRITE_LOCK = Lock()
+
+# --- Project QA response cache (LRU, TTL-based) ---
+_QA_CACHE_MAX = 100
+_QA_CACHE_TTL = 600
+_qa_cache: dict[str, tuple[float, dict[str, Any]]] = {}
+
+
 DEFAULT_FEEDBACK_DIR = Path(os.getenv("DETECTOR_FEEDBACK_DIR", "/app/datasets/feedback_loop"))
 
 try:
@@ -873,7 +996,7 @@ def get_project_knowledge_index(force_refresh: bool = False) -> ProjectKnowledge
     with PROJECT_QA_LOCK:
         if project_knowledge_index is None:
             project_knowledge_index = ProjectKnowledgeIndex()
-        if force_refresh or project_knowledge_index.vectorizer is None:
+        if force_refresh or not project_knowledge_index.index_ready:
             project_knowledge_index.refresh()
 
         return project_knowledge_index
@@ -970,12 +1093,78 @@ class ProjectQARequest(BaseModel):
     answerLength: Literal["brief", "standard", "detailed"] = "standard"
     speakingStyle: Literal["natural", "formal", "confident", "honest"] = "natural"
     speakerProfile: str | None = Field(default=None, max_length=1200)
+    modelPresetId: str | None = Field(default=None, max_length=64)
+    sessionId: str | None = Field(default=None, max_length=64)
+
+
+def _qa_cache_key(payload: ProjectQARequest) -> str:
+    return hashlib.md5(
+        json.dumps(
+            {
+                "q": payload.question.strip(),
+                "k": payload.topK,
+                "mode": payload.agentMode,
+                "length": payload.answerLength,
+                "style": payload.speakingStyle,
+                "preset": payload.modelPresetId,
+                "sid": payload.sessionId,
+            },
+            ensure_ascii=False,
+        ).encode()
+    ).hexdigest()
+
+
+def _qa_cache_get(payload: ProjectQARequest) -> dict[str, Any] | None:
+    key = _qa_cache_key(payload)
+    entry = _qa_cache.get(key)
+    if entry is None:
+        return None
+    ts, data = entry
+    if time.time() - ts > _QA_CACHE_TTL:
+        _qa_cache.pop(key, None)
+        return None
+    return data
+
+
+def _qa_cache_put(payload: ProjectQARequest, response_data: dict[str, Any]) -> None:
+    key = _qa_cache_key(payload)
+    if len(_qa_cache) >= _QA_CACHE_MAX:
+        oldest_key = min(_qa_cache, key=lambda k: _qa_cache[k][0])
+        del _qa_cache[oldest_key]
+    _qa_cache[key] = (time.time(), response_data)
+
+
+class ProjectQAModelPresetOption(BaseModel):
+    id: str
+    label: str
+    provider: str
+    model: str
+    isDefault: bool = False
+
+
+class ProjectQAModelPresetListResponse(BaseModel):
+    presets: list[ProjectQAModelPresetOption]
+    defaultPresetId: str
 
 
 class ProjectQASource(BaseModel):
     path: str
     score: float
     excerpt: str
+
+
+class ProjectQACodeReference(BaseModel):
+    symbol: str
+    path: str
+    section: str | None = None
+    snippet: str
+
+
+class ProjectQAEvidenceReference(BaseModel):
+    label: str
+    path: str
+    excerpt: str
+    context: str
 
 
 class ProjectQAToolTrace(BaseModel):
@@ -992,14 +1181,19 @@ class ProjectQAResponse(BaseModel):
     answerLength: Literal["brief", "standard", "detailed"]
     speakingStyle: Literal["natural", "formal", "confident", "honest"]
     model: str | None = None
+    modelPresetId: str | None = None
+    modelLabel: str | None = None
     sourceCount: int
     indexSourceCount: int
     processingTime: int
     sources: list[ProjectQASource]
+    codeReferences: list[ProjectQACodeReference] = Field(default_factory=list)
+    evidenceReferences: list[ProjectQAEvidenceReference] = Field(default_factory=list)
     toolTrace: list[ProjectQAToolTrace]
     suggestedQuestions: list[str]
     memorySummary: str | None = None
     effectiveSpeakerProfile: str | None = None
+    sessionId: str | None = None
 
 
 class ProjectQAMaterial(BaseModel):
@@ -1233,9 +1427,8 @@ def build_feedback_override_response(
     else:
         human_percentage = 50
         ai_percentage = 50
-        if (
-            boundary_sentence_index is not None
-            and not (0 < boundary_sentence_index < len(final_sentences))
+        if boundary_sentence_index is not None and not (
+            0 < boundary_sentence_index < len(final_sentences)
         ):
             boundary_sentence_index = None
 
@@ -1631,7 +1824,81 @@ class ChatRequest(BaseModel):
     max_tokens: int = Field(default=1000, ge=1, le=CHAT_MAX_TOKENS)
 
 
-def infer_project_agent_mode(
+AGENT_MODE_KEYWORDS: dict[str, tuple[str, ...]] = {
+    "metrics": ("准确率", "f1", "ece", "指标", "多少", "性能"),
+    "critical": ("局限", "缺点", "风险", "不足", "质疑", "过拟合"),
+    "technical": ("原理", "为什么", "架构", "bert", "sep", "边界", "训练", "技术"),
+}
+
+_AGENT_MODE_NAMES = ("metrics", "critical", "technical", "defense")
+
+
+def _score_agent_mode(question: str) -> tuple[str, float]:
+    """Score each mode by keyword hits; return (best_mode, confidence)."""
+    lowered = question.lower()
+    scores: dict[str, int] = {m: 0 for m in AGENT_MODE_KEYWORDS}
+    for mode, keywords in AGENT_MODE_KEYWORDS.items():
+        scores[mode] = sum(1 for kw in keywords if kw in lowered)
+    ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+    best_mode, best_score = ranked[0]
+    if best_score == 0:
+        return "defense", 0.0
+    second_score = ranked[1][1]
+    confidence = 1.0 if second_score == 0 else best_score / (best_score + second_score + 0.01)
+    return best_mode, confidence
+
+
+async def _llm_classify_agent_mode(question: str) -> str | None:
+    """Use a lightweight LLM call to classify the question into one of 4 modes."""
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        return None
+    api_base = os.getenv("OPENAI_BASE_URL", "https://api.hotaruapi.top/v1")
+    model_name = DEFAULT_CHAT_MODEL.strip()
+    if not model_name:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=8) as client:
+            resp = await client.post(
+                f"{api_base}/chat/completions",
+                headers=build_upstream_chat_headers(api_key),
+                json={
+                    "model": model_name,
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": (
+                                "你是分类器。根据用户关于AI文本检测项目的问题，"
+                                "回复且仅回复以下之一：metrics critical technical defense。"
+                                "metrics=指标/数字/性能对比, critical=局限/风险/质疑/不足, "
+                                "technical=原理/架构/机制/训练, defense=其他/答辩准备/项目介绍。"
+                            ),
+                        },
+                        {"role": "user", "content": question[:200]},
+                    ],
+                    "temperature": 0.0,
+                    "max_tokens": 8,
+                },
+            )
+        if resp.status_code != 200:
+            return None
+        text = (
+            resp.json()
+            .get("choices", [{}])[0]
+            .get("message", {})
+            .get("content", "")
+            .strip()
+            .lower()
+        )
+        for mode in _AGENT_MODE_NAMES:
+            if mode in text:
+                return mode
+        return None
+    except Exception:
+        return None
+
+
+async def infer_project_agent_mode(
     question: str,
     requested_mode: Literal["defense", "technical", "metrics", "critical"] | None,
 ) -> Literal["defense", "technical", "metrics", "critical"]:
@@ -1639,17 +1906,17 @@ def infer_project_agent_mode(
     if requested_mode is not None:
         return requested_mode
 
-    lowered = question.lower()
-    if any(keyword in lowered for keyword in ("准确率", "f1", "ece", "指标", "多少", "性能")):
-        return "metrics"
-    if any(keyword in lowered for keyword in ("局限", "缺点", "风险", "不足", "质疑", "过拟合")):
-        return "critical"
-    if any(
-        keyword in lowered
-        for keyword in ("原理", "为什么", "架构", "bert", "sep", "边界", "训练", "技术")
-    ):
-        return "technical"
-    return "defense"
+    best_mode, confidence = _score_agent_mode(question)
+    if confidence >= 0.8:
+        return cast(Literal["defense", "technical", "metrics", "critical"], best_mode)
+
+    llm_mode = await _llm_classify_agent_mode(question)
+    if llm_mode is not None:
+        return cast(Literal["defense", "technical", "metrics", "critical"], llm_mode)
+    return cast(
+        Literal["defense", "technical", "metrics", "critical"],
+        best_mode if confidence > 0 else "defense",
+    )
 
 
 def summarize_project_agent_history(history: list[dict[str, str]]) -> str | None:
@@ -1688,10 +1955,10 @@ def resolve_project_answer_style(
     length_instruction = {
         "brief": "长度控制：适合现场快答，控制在 3 到 5 句，不展开次要背景。",
         "standard": "长度控制：适合常规答辩回答，1 段结论 + 2 到 4 条支撑点。",
-        "detailed": "长度控制：适合老师继续追问后的深入回答，可以补充背景、对比和改进方向。",
+        "detailed": "长度控制：适合深入解释，可以补充背景、对比、边界和改进方向。",
     }[answer_length]
     style_instruction = {
-        "natural": "表达风格：像学生现场答辩，使用自然口语化中文，但保持逻辑清楚。",
+        "natural": "表达风格：自然清楚，默认像向老师当面解释项目；若问题是在准备答辩话术，再切换为学生现场口语。",
         "formal": "表达风格：更正式规范，适合论文汇报口径，减少口语词。",
         "confident": "表达风格：结论更明确，先亮观点，再解释依据，但不要夸大。",
         "honest": "表达风格：更加审慎诚实，明确证据边界，避免把不确定内容说满。",
@@ -1737,6 +2004,114 @@ def build_project_model_snapshot() -> str | None:
     return "\n".join(lines)
 
 
+def format_project_metric_percent(value: Any) -> str | None:
+    """Render runtime metrics as stable percent strings."""
+    if not isinstance(value, (int, float)):
+        return None
+
+    numeric = float(value)
+    if numeric <= 1.0:
+        numeric *= 100.0
+    return f"{numeric:.2f}%"
+
+
+def build_project_local_answer(
+    question: str,
+    *,
+    agent_mode: Literal["defense", "technical", "metrics", "critical"],
+    answer_frame_title: str,
+    hits: list[KnowledgeHit],
+    model_snapshot: str | None,
+) -> str:
+    """Build a human-readable fallback answer when LLM synthesis is unavailable."""
+    lowered = question.lower()
+    model_name = MODEL_VERSION or "bert_v11c_boundary_fix"
+    three_set_avg = format_project_metric_percent(CLASSIFIER_METRICS.get("three_set_avg"))
+    independent_accuracy = format_project_metric_percent(
+        CLASSIFIER_METRICS.get("independent_accuracy")
+    )
+    validation_accuracy = None
+    if isinstance(CLASSIFIER_METRICS.get("_full"), dict):
+        validation_accuracy = format_project_metric_percent(
+            CLASSIFIER_METRICS["_full"].get("core_v1_test_clean")
+        )
+    token_accuracy = "96.69%"
+    calibration_t = CLASSIFIER_METRICS.get("optimal_temperature")
+    ece_after = CLASSIFIER_METRICS.get("ece_after")
+    train_samples = CLASSIFIER_TRAINING_LOG.get("train_samples")
+
+    if answer_frame_title == "30秒总述":
+        return (
+            "根据当前项目资料，可概括为：该系统聚焦中文 AI 生成文本检测，目标是判断一段文本是人写、AI 写，"
+            "还是人机混合。方法上，以 BERT 微调为核心，采用“分类检测 + 边界定位”的双层方案，"
+            "并结合 [SEP] 边界标记来增强混合文本识别。结果上，当前推荐模型"
+            f" {model_name} 的三集平均准确率约 {three_set_avg or '98%+'}，"
+            f"独立评估集准确率约 {independent_accuracy or '98%+'}。应用上，这套系统既能做答辩演示，"
+            "也可以服务于作业审核、内容风控这类中文 AI 文本识别场景。"
+        )
+
+    if answer_frame_title == "创新点三段式":
+        return (
+            "根据当前项目资料，可将创新概括为三点。第一，针对中文混合文本场景，"
+            "系统没有只做二分类，而是把“是否为 AI”判断和“边界在哪里”定位结合起来，形成双层检测结构。"
+            "第二，引入了 [SEP] 边界标记，让模型更容易学习人类段落和 AI 段落的切换位置。"
+            "第三，除了训练集结果，还补了独立评估、校准和答辩演示链路，让模型效果、"
+            "置信度和实际展示都能闭环。"
+        )
+
+    if answer_frame_title == "技术选型答辩":
+        return (
+            "根据当前项目资料，选择 BERT 而不是 GPT、LLaMA 这类大模型，主要有三点原因。"
+            "第一，这个任务本质上是判别任务，不是生成任务，BERT 在文本分类上更直接。"
+            "第二，BERT 微调的训练和部署成本更低，更适合本科毕设这种可复现、可落地的方案。"
+            "第三，该项目还要做边界标记和 span 级定位，BERT 这类编码器结构更容易和 [SEP] 标记、"
+            "Token 级检测器配合。"
+        )
+
+    if answer_frame_title == "指标口径答辩" or agent_mode == "metrics":
+        detail_parts = [f"当前推荐模型是 {model_name}。"]
+        if three_set_avg:
+            detail_parts.append(f"三集平均准确率是 {three_set_avg}。")
+        if independent_accuracy:
+            detail_parts.append(f"独立评估集准确率是 {independent_accuracy}。")
+        if validation_accuracy:
+            detail_parts.append(f"验证集准确率大约是 {validation_accuracy}。")
+        detail_parts.append(f"Token 级边界检测准确率约为 {token_accuracy}。")
+        if calibration_t is not None and ece_after is not None:
+            detail_parts.append(f"另外做了温度缩放校准，T={calibration_t}，ECE={ece_after}。")
+        if train_samples:
+            detail_parts.append(f"训练样本规模大约是 {train_samples} 条。")
+        return "根据当前项目资料，可直接概括为：" + "".join(detail_parts)
+
+    if answer_frame_title == "承认-解释-改进" or agent_mode == "critical":
+        return (
+            "根据当前项目资料，这个项目目前确实还有泛化和数据边界上的局限，不应被表述为已经完全解决。"
+            "从现有结果看，当前模型在仓库记录的多组评估里表现比较稳定，"
+            f"三集平均准确率约 {three_set_avg or '98%+'}，说明它在已覆盖场景下是有效的；"
+            "但如果换到更新的模型来源、不同题材或者更强的规避写法，性能仍然可能波动。"
+            "因此更稳妥的结论是：现阶段系统已经通过独立评估、校准和边界修复尽量降低过拟合风险，"
+            "下一步还需要继续补跨域数据、补新模型样本，并做更严格的外部验证。"
+        )
+
+    if model_snapshot and any(
+        token in lowered for token in ("模型", "准确率", "训练", "样本", "v11", "v10")
+    ):
+        return "根据当前运行时模型信息，可概括为：\n" + model_snapshot.replace("\n", "；") + "。"
+
+    answer = build_project_local_answer(
+        question,
+        agent_mode=agent_mode,
+        answer_frame_title=answer_frame_title,
+        hits=hits,
+        model_snapshot=model_snapshot,
+    )
+    if answer.startswith("根据仓库当前资料，可以先这样回答："):
+        answer = answer.replace(
+            "根据仓库当前资料，可以先这样回答：", "根据仓库当前资料，可概括为：", 1
+        )
+    return answer
+
+
 def run_project_agent_live_detection(text: str) -> str | None:
     """Optionally analyze pasted text with the live detector."""
     cleaned = text.strip()
@@ -1778,24 +2153,24 @@ def build_project_agent_suggestions(
     """Return useful next-question suggestions for the current agent mode."""
     suggestions = {
         "defense": [
-            "如果导师追问项目价值，我应该怎么在 30 秒内回答？",
-            "把这个项目的核心创新点压缩成 3 条答辩口径。",
-            "如果老师问为什么你的系统有实际应用价值，我该怎么说？",
+            "本项目的研究目标、方法与应用价值分别是什么？",
+            "本文的核心创新点可以概括为哪三点？",
+            "该系统的实际应用场景和工程价值体现在哪里？",
         ],
         "technical": [
-            "为什么 [SEP] 边界标记会对混合文本检测有效？",
-            "为什么这里选 BERT，而不是 GPT / LLaMA 这类生成模型？",
-            "双层检测架构里分类器和边界检测器分别解决什么问题？",
+            "为什么 [SEP] 边界标记能够提升混合文本检测效果？",
+            "为什么本文选择 BERT 而不是 GPT / LLaMA 一类生成模型？",
+            "双层检测架构中，分类器与边界检测器分别承担什么作用？",
         ],
         "metrics": [
-            "V11c 相比 V10 具体提升了哪些指标？",
-            "Temperature Scaling 和 ECE 在这里分别说明什么？",
-            "如果老师质疑 98% 准确率过高，我应该怎么解释？",
+            "V11c 相比 V10 的性能提升主要来自哪些因素？",
+            "Temperature Scaling 与 ECE 在本文中分别说明什么？",
+            "当前推荐模型的核心指标有哪些，它们分别代表什么？",
         ],
         "critical": [
-            "项目目前最大的局限性是什么？怎么诚实回答更稳？",
-            "如果老师质疑数据偏差和泛化能力，我应该怎么回应？",
-            "你帮我准备一版‘先承认问题，再说明改进方向’的回答。",
+            "本项目目前的主要局限性是什么？",
+            "数据集设计如何支撑跨模型泛化能力评估？",
+            "如果面对分布外新模型，当前方法可能出现哪些风险？",
         ],
     }
     return suggestions[agent_mode]
@@ -1808,7 +2183,10 @@ def select_project_answer_frame(
     """Choose a structured answer frame for common defense questions."""
     lowered = question.lower()
 
-    if any(token in lowered for token in ("30 秒", "30秒", "一分钟", "概括", "介绍整个项目", "整体介绍")):
+    if any(
+        token in lowered
+        for token in ("30 秒", "30秒", "一分钟", "概括", "介绍整个项目", "整体介绍")
+    ):
         return (
             "30秒总述",
             "回答结构：1 句话讲课题目标；1 句话讲方法；1 句话讲结果；1 句话讲应用价值。",
@@ -1835,8 +2213,8 @@ def select_project_answer_frame(
         )
     if agent_mode == "defense":
         return (
-            "标准答辩口径",
-            "回答结构：先结论；再给 2 到 3 条支撑点；最后补一句老师继续追问时的展开方式。",
+            "标准说明口径",
+            "回答结构：先给结论；再给 2 到 3 条支撑点；最后补一句该结论的适用边界或延伸说明。",
         )
     if agent_mode == "technical":
         return (
@@ -1890,7 +2268,7 @@ def build_project_qa_messages(
     evidence_text = "\n\n".join(evidence_blocks)
     tool_text = "\n".join(f"- {item.tool}: {item.status} ({item.detail})" for item in tool_trace)
     mode_instruction = {
-        "defense": "回答要像答辩现场口头表达，先给结论，再给3条以内支撑点。",
+        "defense": "回答要像项目说明与学术解释，先给结论，再给3条以内支撑点。",
         "technical": "回答要讲原理、机制和因果链，不要只背结论。",
         "metrics": "回答要优先给指标、对比关系和这些指标说明了什么。",
         "critical": "回答要先承认局限，再解释原因，最后给出改进方向，避免硬辩。",
@@ -1911,17 +2289,18 @@ def build_project_qa_messages(
         {
             "role": "system",
             "content": (
-                "你是这个仓库的答辩 Copilot agent。"
-                f"当前回答者身份：{speaker_profile}"
+                "你是这个仓库的项目说明 Copilot agent。"
+                f"当前可参考的项目背景与学生身份：{speaker_profile}"
                 "你只能根据给定的仓库证据回答，不要编造仓库里没有出现的事实。"
                 f"当前模式是 {agent_mode}。{mode_instruction}"
                 f"当前回答模板是：{answer_frame_title}。{answer_frame_instruction}"
                 f"{answer_length_instruction}{speaking_style_instruction}"
-                "尽量使用第一人称，像该学生本人在答辩，而不是像系统说明文。"
+                "默认使用客观说明口吻，像在向不了解项目的读者解释项目，而不是总用第一人称。"
+                "只有当问题明显是在准备第一人称表达，比如‘我该怎么说’‘我该怎么回答’，再切换成第一人称学生口吻。"
                 "回答使用简体中文，先给结论，再给2到4条依据；"
                 "引用时使用 [1] [2] 这种编号。"
                 "如果证据不足，要直接说当前仓库里没有足够证据支持结论。"
-                "如果问题带有答辩风险，要主动补一句‘老师继续追问时可以这样展开’。"
+                "除非问题明确要求，不要附加‘老师继续追问’或类似答辩提示语。"
             ),
         },
         {
@@ -1929,6 +2308,451 @@ def build_project_qa_messages(
             "content": "\n\n".join(user_sections),
         },
     ]
+
+
+def normalize_openai_text_payload(payload: Any) -> str:
+    """Extract plain text from string or block-based OpenAI-compatible payloads."""
+    if isinstance(payload, str):
+        return payload
+
+    if not isinstance(payload, list):
+        return ""
+
+    parts: list[str] = []
+    for item in payload:
+        if isinstance(item, str):
+            parts.append(item)
+            continue
+        if not isinstance(item, dict):
+            continue
+
+        text = item.get("text")
+        if isinstance(text, str):
+            parts.append(text)
+            continue
+
+        nested_content = item.get("content")
+        if isinstance(nested_content, str):
+            parts.append(nested_content)
+
+    return "".join(parts)
+
+
+def extract_openai_message_field(message: dict[str, Any], field_name: str) -> str:
+    """Read a text field from an OpenAI-compatible message payload."""
+    return normalize_openai_text_payload(message.get(field_name)) or (
+        message.get(field_name) if isinstance(message.get(field_name), str) else ""
+    )
+
+
+def extract_openai_delta_text(delta: dict[str, Any]) -> tuple[str, str]:
+    """Extract answer and reasoning deltas from streamed OpenAI-compatible payloads."""
+    answer_delta = extract_openai_message_field(delta, "content")
+    reasoning_delta = extract_openai_message_field(delta, "reasoning_content")
+
+    content_blocks = delta.get("content")
+    if isinstance(content_blocks, list):
+        for block in content_blocks:
+            if not isinstance(block, dict):
+                continue
+            block_text = ""
+            text_value = block.get("text")
+            if isinstance(text_value, str):
+                block_text = text_value
+            elif isinstance(block.get("content"), str):
+                block_text = block["content"]
+
+            block_type = str(block.get("type", "")).lower()
+            if block_type in {"reasoning", "thinking", "reasoning_content"}:
+                reasoning_delta += block_text
+            elif block_type in {"text", "output_text"}:
+                answer_delta += block_text
+
+    if not reasoning_delta and isinstance(delta.get("reasoning"), str):
+        reasoning_delta = delta["reasoning"]
+
+    return answer_delta, reasoning_delta
+
+
+def encode_project_qa_stream_event(event_type: str, **payload: Any) -> bytes:
+    """Serialize a project QA stream event as newline-delimited JSON."""
+    body = {"type": event_type, **payload}
+    return (json.dumps(body, ensure_ascii=False) + "\n").encode("utf-8")
+
+
+def extract_project_answer_code_terms(answer: str) -> list[str]:
+    """Find distinct inline code terms worth turning into clickable references."""
+    terms: list[str] = []
+    seen: set[str] = set()
+    for match in re.findall(r"`([^`]{2,80})`", answer):
+        cleaned = match.strip()
+        if not cleaned or cleaned.casefold() in seen:
+            continue
+        seen.add(cleaned.casefold())
+        terms.append(cleaned)
+    return terms
+
+
+def extract_project_answer_evidence_labels(answer: str) -> list[str]:
+    """Extract evidence labels like [1] [2] from the answer."""
+    labels: list[str] = []
+    seen: set[str] = set()
+    for match in re.findall(r"\[(\d+)\]", answer):
+        label = f"[{match}]"
+        if label in seen:
+            continue
+        seen.add(label)
+        labels.append(label)
+    return labels
+
+
+def extract_project_answer_symbol_candidates(answer: str, context: dict[str, Any]) -> list[str]:
+    """Extract local symbol candidates from both inline-code and plain text mentions."""
+    terms = extract_project_answer_code_terms(answer)
+    seen: set[str] = {term.casefold() for term in terms}
+    knowledge_index = context.get("knowledge_index")
+    if knowledge_index is None:
+        return terms
+
+    symbol_map = getattr(knowledge_index, "code_symbol_index", {})
+    answer_text = answer.casefold()
+    for symbol_key, symbols in symbol_map.items():
+        symbol = symbols[0].symbol
+        if symbol.casefold() in seen:
+            continue
+        # Keep matching conservative to avoid turning ordinary prose into fake code references.
+        if len(symbol) < 4:
+            continue
+        if symbol.casefold() not in answer_text:
+            continue
+        seen.add(symbol.casefold())
+        terms.append(symbol)
+    return terms
+
+
+def build_project_code_snippet(content: str, term: str, window: int = 260) -> str:
+    """Build a compact snippet centered around the referenced term."""
+    lowered_content = content.lower()
+    lowered_term = term.lower()
+    position = lowered_content.find(lowered_term)
+    if position < 0:
+        compact = re.sub(r"\s+", " ", content).strip()
+        return compact[:window].rstrip() + ("..." if len(compact) > window else "")
+
+    start = max(0, position - window // 2)
+    end = min(len(content), position + len(term) + window // 2)
+    snippet = content[start:end].strip()
+    if start > 0:
+        snippet = "..." + snippet
+    if end < len(content):
+        snippet = snippet + "..."
+    return snippet
+
+
+def build_project_excerpt_context(text: str, window: int = 420) -> str:
+    """Expand a short excerpt into a slightly richer evidence context block."""
+    compact = re.sub(r"\s+", " ", text).strip()
+    if len(compact) <= window:
+        return compact
+    return compact[:window].rstrip() + "..."
+
+
+def build_project_answer_code_references(
+    answer: str, context: dict[str, Any]
+) -> list[ProjectQACodeReference]:
+    """Resolve clickable code/doc references for inline code terms in the answer."""
+    terms = extract_project_answer_symbol_candidates(answer, context)
+    if not terms:
+        return []
+
+    references: list[ProjectQACodeReference] = []
+    seen_keys: set[tuple[str, str]] = set()
+    knowledge_index = context.get("knowledge_index")
+
+    for term in terms:
+        if knowledge_index is not None:
+            matched_symbol = knowledge_index.resolve_code_symbol(term)
+            if matched_symbol is not None:
+                ref_key = (term.casefold(), matched_symbol.path)
+                if ref_key in seen_keys:
+                    continue
+                seen_keys.add(ref_key)
+                references.append(
+                    ProjectQACodeReference(
+                        symbol=term,
+                        path=matched_symbol.path,
+                        section=matched_symbol.signature,
+                        snippet=matched_symbol.snippet,
+                    )
+                )
+                continue
+
+        candidate_chunks = [hit.chunk for hit in context.get("hits", [])]
+        if knowledge_index is not None:
+            candidate_chunks.extend(knowledge_index.chunks)
+
+        lowered_term = term.lower()
+        matched_chunk = None
+        for chunk in candidate_chunks:
+            haystacks = [chunk.title.lower(), (chunk.section or "").lower(), chunk.content.lower()]
+            if any(lowered_term in haystack for haystack in haystacks):
+                matched_chunk = chunk
+                break
+
+        if matched_chunk is None:
+            continue
+
+        ref_key = (term.casefold(), matched_chunk.path)
+        if ref_key in seen_keys:
+            continue
+        seen_keys.add(ref_key)
+        references.append(
+            ProjectQACodeReference(
+                symbol=term,
+                path=matched_chunk.path,
+                section=matched_chunk.section or None,
+                snippet=build_project_code_snippet(matched_chunk.content, term),
+            )
+        )
+
+    return references[:8]
+
+
+def build_project_answer_evidence_references(
+    answer: str, context: dict[str, Any]
+) -> list[ProjectQAEvidenceReference]:
+    """Resolve clickable evidence labels like [1] back to retrieval hits."""
+    labels = extract_project_answer_evidence_labels(answer)
+    hits = context.get("hits", [])
+    if not labels or not hits:
+        return []
+
+    references: list[ProjectQAEvidenceReference] = []
+    for label in labels:
+        try:
+            index = int(label.strip("[]")) - 1
+        except ValueError:
+            continue
+        if index < 0 or index >= len(hits):
+            continue
+        hit = hits[index]
+        content = getattr(hit.chunk, "content", None) or hit.excerpt
+        references.append(
+            ProjectQAEvidenceReference(
+                label=label,
+                path=hit.chunk.path,
+                excerpt=hit.excerpt,
+                context=build_project_excerpt_context(content),
+            )
+        )
+    return references
+
+
+# ---------------------------------------------------------------------------
+# Server-side session storage (file-backed, lightweight)
+# ---------------------------------------------------------------------------
+SESSION_DIR = Path(os.getenv("DC_SESSION_DIR", str(PROJECT_ROOT / "sessions")))
+SESSION_MAX_TURNS = 20
+_SESSION_LOCKS: dict[str, Lock] = defaultdict(Lock)
+_safe_session_id_re = re.compile(r"^[a-zA-Z0-9_-]{4,64}$")
+
+
+def _session_path(session_id: str) -> Path:
+    return SESSION_DIR / f"{session_id}.jsonl"
+
+
+def _is_safe_session_id(sid: str) -> bool:
+    return bool(_safe_session_id_re.match(sid))
+
+
+def load_session_history(session_id: str) -> list[dict[str, str]]:
+    if not _is_safe_session_id(session_id):
+        return []
+    path = _session_path(session_id)
+    if not path.exists():
+        return []
+    turns: list[dict[str, str]] = []
+    try:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            entry = json.loads(line)
+            if isinstance(entry, dict) and "role" in entry and "content" in entry:
+                turns.append({"role": str(entry["role"]), "content": str(entry["content"])})
+    except (OSError, json.JSONDecodeError):
+        return []
+    return turns[-SESSION_MAX_TURNS:]
+
+
+def save_session_turn(session_id: str, role: str, content: str) -> None:
+    if not _is_safe_session_id(session_id):
+        return
+    SESSION_DIR.mkdir(parents=True, exist_ok=True)
+    path = _session_path(session_id)
+    lock = _SESSION_LOCKS[session_id]
+    with lock:
+        with path.open("a", encoding="utf-8") as f:
+            f.write(json.dumps({"role": role, "content": content}, ensure_ascii=False) + "\n")
+
+
+def merge_session_history(
+    payload: ProjectQARequest,
+) -> tuple[list[dict[str, str]], str | None]:
+    """Merge frontend history with server-side session. Return (history, effective_session_id)."""
+    sid = payload.sessionId
+    if not sid:
+        return payload.history, None
+    server_history = load_session_history(sid)
+    if not server_history:
+        return payload.history, sid
+    combined = list(server_history) + list(payload.history)
+    return combined[-SESSION_MAX_TURNS:], sid
+
+
+async def prepare_project_qa_context(payload: ProjectQARequest, question: str) -> dict[str, Any]:
+    """Assemble reusable project QA context shared by normal and streaming endpoints."""
+    merged_history, effective_session_id = merge_session_history(payload)
+    if effective_session_id:
+        save_session_turn(effective_session_id, "user", question)
+    agent_mode = await infer_project_agent_mode(question, payload.agentMode)
+    answer_frame_title, answer_frame_instruction = select_project_answer_frame(question, agent_mode)
+    answer_length_instruction, speaking_style_instruction = resolve_project_answer_style(
+        payload.answerLength,
+        payload.speakingStyle,
+    )
+    speaker_profile = resolve_project_speaker_profile(payload.speakerProfile)
+    history_summary = summarize_project_agent_history(merged_history)
+
+    knowledge_index = get_project_knowledge_index(force_refresh=payload.forceRefresh)
+    hits = knowledge_index.search(question, top_k=payload.topK)
+    evidence_blocks = build_project_agent_evidence_blocks(hits)
+    sources = [
+        ProjectQASource(path=hit.chunk.path, score=round(hit.score, 4), excerpt=hit.excerpt)
+        for hit in hits
+    ]
+    tool_trace: list[ProjectQAToolTrace] = [
+        ProjectQAToolTrace(
+            tool="repository_search",
+            status="used" if sources else "skipped",
+            detail=f"命中 {len(sources)} 个仓库证据片段",
+        )
+    ]
+
+    if history_summary:
+        tool_trace.append(
+            ProjectQAToolTrace(
+                tool="conversation_memory",
+                status="used",
+                detail="使用最近多轮对话摘要保持上下文连续",
+            )
+        )
+
+    model_snapshot = None
+    if should_use_project_model_info(question, agent_mode):
+        model_snapshot = build_project_model_snapshot()
+        tool_trace.append(
+            ProjectQAToolTrace(
+                tool="runtime_model_info",
+                status="used" if model_snapshot else "unavailable",
+                detail=(
+                    "注入当前模型版本、训练样本数和关键指标"
+                    if model_snapshot
+                    else "当前运行环境缺少模型元信息"
+                ),
+            )
+        )
+
+    live_detection_summary = None
+    if payload.analysisText:
+        live_detection_summary = run_project_agent_live_detection(payload.analysisText)
+        tool_trace.append(
+            ProjectQAToolTrace(
+                tool="live_detector",
+                status="used" if detector is not None else "unavailable",
+                detail=(
+                    "对附带文本执行了一次实时检测分析"
+                    if detector is not None
+                    else "后端检测器不可用，未执行实时文本分析"
+                ),
+            )
+        )
+
+    requested_model_preset = resolve_project_qa_model_preset(payload.modelPresetId)
+    ordered_model_presets = [requested_model_preset] + [
+        preset
+        for preset in PROJECT_QA_MODEL_PRESETS
+        if preset["id"] != requested_model_preset["id"]
+    ]
+
+    answer = build_extractive_answer(question, hits)
+    if not sources and live_detection_summary:
+        answer = f"当前仓库证据检索较少，但实时检测工具给出的结果是：{live_detection_summary}"
+    elif not sources and model_snapshot:
+        answer = f"当前仓库证据检索较少，不过运行时模型信息可以先这样回答：\n{model_snapshot}"
+
+    return {
+        "agent_mode": agent_mode,
+        "answer": answer,
+        "answer_frame_instruction": answer_frame_instruction,
+        "answer_frame_title": answer_frame_title,
+        "answer_length_instruction": answer_length_instruction,
+        "evidence_blocks": evidence_blocks,
+        "hits": hits,
+        "history_summary": history_summary,
+        "knowledge_index": knowledge_index,
+        "live_detection_summary": live_detection_summary,
+        "merged_history": merged_history,
+        "effective_session_id": effective_session_id,
+        "model_snapshot": model_snapshot,
+        "ordered_model_presets": ordered_model_presets,
+        "requested_model_preset": requested_model_preset,
+        "sources": sources,
+        "speaker_profile": speaker_profile,
+        "speaking_style_instruction": speaking_style_instruction,
+        "suggested_questions": build_project_agent_suggestions(agent_mode),
+        "tool_trace": tool_trace,
+    }
+
+
+def build_project_qa_response(
+    *,
+    payload: ProjectQARequest,
+    context: dict[str, Any],
+    answer: str,
+    mode: Literal["extractive", "rag"],
+    model_name: str | None,
+    model_preset_id: str,
+    model_label: str,
+    start_time: float,
+) -> ProjectQAResponse:
+    """Convert resolved QA state into the public response model."""
+    processing_time = int((time.time() - start_time) * 1000)
+    knowledge_index = context["knowledge_index"]
+    code_references = build_project_answer_code_references(answer, context)
+    evidence_references = build_project_answer_evidence_references(answer, context)
+    return ProjectQAResponse(
+        answer=answer,
+        mode=mode,
+        agentMode=context["agent_mode"],
+        answerFrame=context["answer_frame_title"],
+        answerLength=payload.answerLength,
+        speakingStyle=payload.speakingStyle,
+        model=model_name,
+        modelPresetId=model_preset_id,
+        modelLabel=model_label,
+        sourceCount=len(context["sources"]),
+        indexSourceCount=knowledge_index.source_count,
+        processingTime=processing_time,
+        sources=context["sources"],
+        codeReferences=code_references,
+        evidenceReferences=evidence_references,
+        toolTrace=context["tool_trace"],
+        suggestedQuestions=context["suggested_questions"],
+        memorySummary=context["history_summary"],
+        effectiveSpeakerProfile=context["speaker_profile"],
+        sessionId=context.get("effective_session_id"),
+    )
 
 
 def resolve_api_key(authorization_header: str | None) -> str | None:
@@ -1947,6 +2771,36 @@ def resolve_api_key(authorization_header: str | None) -> str | None:
     if auth.lower() == "bearer":
         return None
     return auth or None
+
+
+@app.get(
+    "/api/project-qa/model-presets",
+    response_model=ProjectQAModelPresetListResponse,
+    response_model_exclude_none=True,
+)
+async def list_project_qa_model_presets(
+    http_request: Request,
+    x_internal_token: str | None = Header(default=None, alias="X-Internal-Token"),
+) -> ProjectQAModelPresetListResponse:
+    """List selectable project QA model presets for the frontend."""
+    verify_internal_token(x_internal_token)
+    enforce_rate_limit(http_request, "chat", CHAT_RATE_LIMIT_PER_WINDOW)
+
+    presets = [
+        ProjectQAModelPresetOption(
+            id=preset["id"],
+            label=preset["label"],
+            provider=preset["provider"],
+            model=preset["model"],
+            isDefault=preset["id"] == PROJECT_QA_DEFAULT_PRESET_ID,
+        )
+        for preset in PROJECT_QA_MODEL_PRESETS
+    ]
+    presets.sort(key=lambda preset: (not preset.isDefault, preset.label.casefold()))
+    return ProjectQAModelPresetListResponse(
+        presets=presets,
+        defaultPresetId=PROJECT_QA_DEFAULT_PRESET_ID,
+    )
 
 
 @app.get(
@@ -1983,8 +2837,12 @@ async def upload_project_qa_materials(
         try:
             form = await http_request.form()
         except Exception as exc:
-            raise HTTPException(status_code=400, detail="Failed to parse uploaded form data") from exc
-        effective_files = [value for value in form.getlist("files") if isinstance(value, UploadFile)]
+            raise HTTPException(
+                status_code=400, detail="Failed to parse uploaded form data"
+            ) from exc
+        effective_files = [
+            value for value in form.getlist("files") if isinstance(value, UploadFile)
+        ]
 
     if not effective_files:
         raise HTTPException(status_code=400, detail="No files uploaded")
@@ -2041,175 +2899,466 @@ async def project_qa(
     if not question:
         raise HTTPException(status_code=400, detail="question must not be empty")
 
-    agent_mode = infer_project_agent_mode(question, payload.agentMode)
-    answer_frame_title, answer_frame_instruction = select_project_answer_frame(question, agent_mode)
-    answer_length_instruction, speaking_style_instruction = resolve_project_answer_style(
-        payload.answerLength,
-        payload.speakingStyle,
-    )
-    speaker_profile = resolve_project_speaker_profile(payload.speakerProfile)
-    history_summary = summarize_project_agent_history(payload.history)
+    if not payload.forceRefresh:
+        cached = _qa_cache_get(payload)
+        if cached is not None:
+            return ProjectQAResponse(**cached)
 
-    knowledge_index = get_project_knowledge_index(force_refresh=payload.forceRefresh)
-    hits = knowledge_index.search(question, top_k=payload.topK)
-    evidence_blocks = build_project_agent_evidence_blocks(hits)
-    sources = [
-        ProjectQASource(path=hit.chunk.path, score=round(hit.score, 4), excerpt=hit.excerpt)
-        for hit in hits
-    ]
-    tool_trace: list[ProjectQAToolTrace] = [
-        ProjectQAToolTrace(
-            tool="repository_search",
-            status="used" if sources else "skipped",
-            detail=f"命中 {len(sources)} 个仓库证据片段",
-        )
-    ]
-
-    if history_summary:
-        tool_trace.append(
-            ProjectQAToolTrace(
-                tool="conversation_memory",
-                status="used",
-                detail="使用最近多轮对话摘要保持上下文连续",
-            )
-        )
-
-    model_snapshot = None
-    if should_use_project_model_info(question, agent_mode):
-        model_snapshot = build_project_model_snapshot()
-        tool_trace.append(
-            ProjectQAToolTrace(
-                tool="runtime_model_info",
-                status="used" if model_snapshot else "unavailable",
-                detail=(
-                    "注入当前模型版本、训练样本数和关键指标"
-                    if model_snapshot
-                    else "当前运行环境缺少模型元信息"
-                ),
-            )
-        )
-
-    live_detection_summary = None
-    if payload.analysisText:
-        live_detection_summary = run_project_agent_live_detection(payload.analysisText)
-        tool_trace.append(
-            ProjectQAToolTrace(
-                tool="live_detector",
-                status="used" if detector is not None else "unavailable",
-                detail=(
-                    "对附带文本执行了一次实时检测分析"
-                    if detector is not None
-                    else "后端检测器不可用，未执行实时文本分析"
-                ),
-            )
-        )
-
-    answer = build_extractive_answer(question, hits)
-    if not sources and live_detection_summary:
-        answer = f"当前仓库证据检索较少，但实时检测工具给出的结果是：{live_detection_summary}"
-    elif not sources and model_snapshot:
-        answer = f"当前仓库证据检索较少，不过运行时模型信息可以先这样回答：\n{model_snapshot}"
+    context = await prepare_project_qa_context(payload, question)
+    answer = context["answer"]
     mode: Literal["extractive", "rag"] = "extractive"
     model_name: str | None = None
-    suggested_questions = build_project_agent_suggestions(agent_mode)
+    requested_model_preset = context["requested_model_preset"]
+    model_preset_id = requested_model_preset["id"]
+    model_label = requested_model_preset["label"]
+    if payload.useLLM and (
+        context["sources"] or context["model_snapshot"] or context["live_detection_summary"]
+    ):
+        for preset_index, model_preset in enumerate(context["ordered_model_presets"]):
+            candidate_api_key = model_preset.get("api_key") or resolve_api_key(authorization)
+            candidate_api_base = model_preset.get("api_base") or os.getenv(
+                "OPENAI_BASE_URL",
+                "https://api.hotaruapi.top/v1",
+            )
+            candidate_model_name = model_preset.get("model") or DEFAULT_CHAT_MODEL.strip() or None
+            candidate_label = model_preset["label"]
 
-    api_key = resolve_api_key(authorization)
-    api_base = os.getenv("OPENAI_BASE_URL", "https://api.hotaruapi.top/v1")
-    if payload.useLLM and api_key and (sources or model_snapshot or live_detection_summary):
-        model_name = DEFAULT_CHAT_MODEL.strip() or None
-        try:
-            async with httpx.AsyncClient(timeout=UPSTREAM_CHAT_TIMEOUT_SECONDS) as client:
-                response = await client.post(
-                    f"{api_base}/chat/completions",
-                    headers={
-                        "Authorization": f"Bearer {api_key}",
-                        "Content-Type": "application/json",
-                    },
-                    json={
-                        "model": model_name,
-                        "messages": build_project_qa_messages(
-                            question=question,
-                            evidence_blocks=evidence_blocks,
-                            agent_mode=agent_mode,
-                            answer_frame_title=answer_frame_title,
-                            answer_frame_instruction=answer_frame_instruction,
-                            answer_length_instruction=answer_length_instruction,
-                            speaking_style_instruction=speaking_style_instruction,
-                            speaker_profile=speaker_profile,
-                            history_summary=history_summary,
-                            model_snapshot=model_snapshot,
-                            live_detection_summary=live_detection_summary,
-                            tool_trace=tool_trace,
-                        ),
-                        "temperature": 0.2,
-                        "max_tokens": min(payload.topK * 180, CHAT_MAX_TOKENS),
-                    },
+            if not candidate_api_key or not candidate_model_name:
+                context["tool_trace"].append(
+                    ProjectQAToolTrace(
+                        tool="llm_synthesis",
+                        status="skipped",
+                        detail=f"预设模型 {candidate_label} 缺少可用配置，已跳过",
+                    )
                 )
+                continue
 
-            if response.status_code == 200:
-                body = response.json()
-                llm_answer = (
-                    body.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
-                )
-                if llm_answer:
-                    answer = llm_answer
-                    mode = "rag"
-                    model_name = body.get("model", model_name)
-                    tool_trace.append(
+            try:
+                async with httpx.AsyncClient(timeout=UPSTREAM_CHAT_TIMEOUT_SECONDS) as client:
+                    response = await client.post(
+                        f"{candidate_api_base}/chat/completions",
+                        headers=build_upstream_chat_headers(candidate_api_key),
+                        json={
+                            "model": candidate_model_name,
+                            "messages": build_project_qa_messages(
+                                question=question,
+                                evidence_blocks=context["evidence_blocks"],
+                                agent_mode=context["agent_mode"],
+                                answer_frame_title=context["answer_frame_title"],
+                                answer_frame_instruction=context["answer_frame_instruction"],
+                                answer_length_instruction=context["answer_length_instruction"],
+                                speaking_style_instruction=context["speaking_style_instruction"],
+                                speaker_profile=context["speaker_profile"],
+                                history_summary=context["history_summary"],
+                                model_snapshot=context["model_snapshot"],
+                                live_detection_summary=context["live_detection_summary"],
+                                tool_trace=context["tool_trace"],
+                            ),
+                            "temperature": 0.2,
+                            "max_tokens": min(payload.topK * 180, CHAT_MAX_TOKENS),
+                        },
+                    )
+
+                if response.status_code != 200:
+                    logger.warning(
+                        "[project_qa] upstream preset %s returned status %s",
+                        model_preset["id"],
+                        response.status_code,
+                    )
+                    context["tool_trace"].append(
                         ProjectQAToolTrace(
                             tool="llm_synthesis",
-                            status="used",
-                            detail=f"使用上游模型 {model_name or DEFAULT_CHAT_MODEL} 综合证据生成答辩回答",
+                            status="unavailable",
+                            detail=(
+                                f"上游模型 {candidate_label} 接口返回 {response.status_code}"
+                                + (
+                                    "，已尝试切换下一个预设"
+                                    if preset_index < len(context["ordered_model_presets"]) - 1
+                                    else "，已回退本地抽取回答"
+                                )
+                            ),
                         )
                     )
-            else:
-                logger.warning("[project_qa] upstream returned status %s", response.status_code)
-                tool_trace.append(
+                    continue
+
+                body = response.json()
+                message = body.get("choices", [{}])[0].get("message", {})
+                llm_answer = extract_openai_message_field(message, "content").strip()
+                reasoning_only = extract_openai_message_field(message, "reasoning_content").strip()
+                if not llm_answer:
+                    detail = (
+                        f"上游模型 {candidate_label} 仅返回思考过程、未返回正文"
+                        if reasoning_only
+                        else f"上游模型 {candidate_label} 返回为空"
+                    )
+                    context["tool_trace"].append(
+                        ProjectQAToolTrace(
+                            tool="llm_synthesis",
+                            status="unavailable",
+                            detail=(
+                                detail
+                                + (
+                                    "，已尝试切换下一个预设"
+                                    if preset_index < len(context["ordered_model_presets"]) - 1
+                                    else "，已回退本地抽取回答"
+                                )
+                            ),
+                        )
+                    )
+                    continue
+
+                answer = llm_answer
+                mode = "rag"
+                model_name = body.get("model", candidate_model_name)
+                model_preset_id = model_preset["id"]
+                model_label = candidate_label
+                context["tool_trace"].append(
+                    ProjectQAToolTrace(
+                        tool="llm_synthesis",
+                        status="used",
+                        detail=(
+                            f"使用上游模型 {candidate_label} / {model_name or DEFAULT_CHAT_MODEL} 综合证据生成答辩回答"
+                            if preset_index == 0
+                            else f"首选模型不可用，已切换到 {candidate_label} / {model_name or DEFAULT_CHAT_MODEL} 继续生成答辩回答"
+                        ),
+                    )
+                )
+                break
+            except Exception as exc:
+                logger.warning(
+                    "[project_qa] preset %s failed, trying next: %s",
+                    model_preset["id"],
+                    exc,
+                )
+                context["tool_trace"].append(
                     ProjectQAToolTrace(
                         tool="llm_synthesis",
                         status="unavailable",
-                        detail=f"上游模型接口返回 {response.status_code}，已回退本地抽取回答",
+                        detail=(
+                            f"上游模型 {candidate_label} 调用失败：{exc}"
+                            + (
+                                "，已尝试切换下一个预设"
+                                if preset_index < len(context["ordered_model_presets"]) - 1
+                                else "，已回退本地抽取回答"
+                            )
+                        ),
                     )
                 )
-        except Exception as exc:
-            logger.warning("[project_qa] falling back to extractive mode: %s", exc)
-            tool_trace.append(
-                ProjectQAToolTrace(
-                    tool="llm_synthesis",
-                    status="unavailable",
-                    detail=f"上游模型调用失败，已回退本地抽取回答：{exc}",
-                )
-            )
     elif payload.useLLM:
-        tool_trace.append(
+        context["tool_trace"].append(
             ProjectQAToolTrace(
                 tool="llm_synthesis",
-                status="skipped" if not api_key else "unavailable",
-                detail=(
-                    "当前未配置 OPENAI_API_KEY，使用本地抽取式回答"
-                    if not api_key
-                    else "没有足够的证据上下文可交给上游模型综合"
-                ),
+                status="skipped",
+                detail=("当前没有足够的证据上下文可交给上游模型综合"),
             )
         )
 
-    processing_time = int((time.time() - start_time) * 1000)
-    return ProjectQAResponse(
+    effective_sid = context.get("effective_session_id")
+    if effective_sid and answer:
+        save_session_turn(effective_sid, "assistant", answer)
+
+    response_obj = build_project_qa_response(
+        payload=payload,
+        context=context,
         answer=answer,
         mode=mode,
-        agentMode=agent_mode,
-        answerFrame=answer_frame_title,
-        answerLength=payload.answerLength,
-        speakingStyle=payload.speakingStyle,
-        model=model_name,
-        sourceCount=len(sources),
-        indexSourceCount=knowledge_index.source_count,
-        processingTime=processing_time,
-        sources=sources,
-        toolTrace=tool_trace,
-        suggestedQuestions=suggested_questions,
-        memorySummary=history_summary,
-        effectiveSpeakerProfile=speaker_profile,
+        model_name=model_name,
+        model_preset_id=model_preset_id,
+        model_label=model_label,
+        start_time=start_time,
+    )
+    _qa_cache_put(payload, response_obj.model_dump(exclude_none=True))
+    return response_obj
+
+
+@app.post("/api/project-qa/stream")
+async def project_qa_stream(
+    payload: ProjectQARequest,
+    http_request: Request,
+    authorization: str | None = Header(default=None),
+    x_internal_token: str | None = Header(default=None, alias="X-Internal-Token"),
+) -> StreamingResponse:
+    """Stream project QA progress and answer deltas as newline-delimited JSON."""
+    verify_internal_token(x_internal_token)
+    enforce_rate_limit(http_request, "chat", CHAT_RATE_LIMIT_PER_WINDOW)
+
+    start_time = time.time()
+    question = payload.question.strip()
+    if not question:
+        raise HTTPException(status_code=400, detail="question must not be empty")
+
+    async def event_stream():
+        try:
+            yield encode_project_qa_stream_event("status", message="正在检索仓库资料")
+            context = await prepare_project_qa_context(payload, question)
+            for trace in context["tool_trace"]:
+                yield encode_project_qa_stream_event("trace", trace=trace.model_dump())
+
+            answer = context["answer"]
+            mode: Literal["extractive", "rag"] = "extractive"
+            model_name: str | None = None
+            requested_model_preset = context["requested_model_preset"]
+            model_preset_id = requested_model_preset["id"]
+            model_label = requested_model_preset["label"]
+            answer_chunks: list[str] = []
+
+            if payload.useLLM and (
+                context["sources"] or context["model_snapshot"] or context["live_detection_summary"]
+            ):
+                for preset_index, model_preset in enumerate(context["ordered_model_presets"]):
+                    candidate_api_key = model_preset.get("api_key") or resolve_api_key(
+                        authorization
+                    )
+                    candidate_api_base = model_preset.get("api_base") or os.getenv(
+                        "OPENAI_BASE_URL",
+                        "https://api.hotaruapi.top/v1",
+                    )
+                    candidate_model_name = (
+                        model_preset.get("model") or DEFAULT_CHAT_MODEL.strip() or None
+                    )
+                    candidate_label = model_preset["label"]
+                    candidate_emitted_deltas = False
+                    answer_chunks = []
+
+                    if not candidate_api_key or not candidate_model_name:
+                        trace = ProjectQAToolTrace(
+                            tool="llm_synthesis",
+                            status="skipped",
+                            detail=f"预设模型 {candidate_label} 缺少可用配置，已跳过",
+                        )
+                        context["tool_trace"].append(trace)
+                        yield encode_project_qa_stream_event("trace", trace=trace.model_dump())
+                        continue
+
+                    yield encode_project_qa_stream_event(
+                        "status",
+                        message=f"正在调用 {candidate_label} 生成回答",
+                    )
+
+                    try:
+                        async with httpx.AsyncClient(
+                            timeout=UPSTREAM_CHAT_TIMEOUT_SECONDS
+                        ) as client:
+                            async with client.stream(
+                                "POST",
+                                f"{candidate_api_base}/chat/completions",
+                                headers=build_upstream_chat_headers(candidate_api_key),
+                                json={
+                                    "model": candidate_model_name,
+                                    "messages": build_project_qa_messages(
+                                        question=question,
+                                        evidence_blocks=context["evidence_blocks"],
+                                        agent_mode=context["agent_mode"],
+                                        answer_frame_title=context["answer_frame_title"],
+                                        answer_frame_instruction=context[
+                                            "answer_frame_instruction"
+                                        ],
+                                        answer_length_instruction=context[
+                                            "answer_length_instruction"
+                                        ],
+                                        speaking_style_instruction=context[
+                                            "speaking_style_instruction"
+                                        ],
+                                        speaker_profile=context["speaker_profile"],
+                                        history_summary=context["history_summary"],
+                                        model_snapshot=context["model_snapshot"],
+                                        live_detection_summary=context["live_detection_summary"],
+                                        tool_trace=context["tool_trace"],
+                                    ),
+                                    "temperature": 0.2,
+                                    "max_tokens": min(payload.topK * 180, CHAT_MAX_TOKENS),
+                                    "stream": True,
+                                },
+                            ) as response:
+                                if response.status_code != 200:
+                                    logger.warning(
+                                        "[project_qa_stream] upstream preset %s returned status %s",
+                                        model_preset["id"],
+                                        response.status_code,
+                                    )
+                                    trace = ProjectQAToolTrace(
+                                        tool="llm_synthesis",
+                                        status="unavailable",
+                                        detail=(
+                                            f"上游模型 {candidate_label} 接口返回 {response.status_code}"
+                                            + (
+                                                "，已尝试切换下一个预设"
+                                                if preset_index
+                                                < len(context["ordered_model_presets"]) - 1
+                                                else "，已回退本地抽取回答"
+                                            )
+                                        ),
+                                    )
+                                    context["tool_trace"].append(trace)
+                                    yield encode_project_qa_stream_event(
+                                        "trace", trace=trace.model_dump()
+                                    )
+                                    continue
+
+                                content_type = (response.headers.get("content-type") or "").lower()
+                                if "application/json" in content_type:
+                                    body = json.loads((await response.aread()).decode("utf-8"))
+                                    reasoning_text = extract_openai_message_field(
+                                        body.get("choices", [{}])[0].get("message", {}),
+                                        "reasoning_content",
+                                    ).strip()
+                                    llm_answer = extract_openai_message_field(
+                                        body.get("choices", [{}])[0].get("message", {}),
+                                        "content",
+                                    ).strip()
+                                    if reasoning_text:
+                                        candidate_emitted_deltas = True
+                                        yield encode_project_qa_stream_event(
+                                            "thinking_delta",
+                                            delta=reasoning_text,
+                                        )
+                                    if llm_answer:
+                                        candidate_emitted_deltas = True
+                                        answer_chunks.append(llm_answer)
+                                        yield encode_project_qa_stream_event(
+                                            "answer_delta",
+                                            delta=llm_answer,
+                                        )
+                                else:
+                                    async for raw_line in response.aiter_lines():
+                                        line = raw_line.strip()
+                                        if not line:
+                                            continue
+                                        if line.startswith("data:"):
+                                            line = line[5:].strip()
+                                        if not line or line == "[DONE]":
+                                            continue
+
+                                        try:
+                                            chunk = json.loads(line)
+                                        except json.JSONDecodeError:
+                                            continue
+
+                                        choices = chunk.get("choices") or []
+                                        if not choices:
+                                            continue
+                                        delta = choices[0].get("delta") or {}
+                                        answer_delta, reasoning_delta = extract_openai_delta_text(
+                                            delta
+                                        )
+                                        if reasoning_delta:
+                                            candidate_emitted_deltas = True
+                                            yield encode_project_qa_stream_event(
+                                                "thinking_delta",
+                                                delta=reasoning_delta,
+                                            )
+                                        if answer_delta:
+                                            candidate_emitted_deltas = True
+                                            answer_chunks.append(answer_delta)
+                                            yield encode_project_qa_stream_event(
+                                                "answer_delta",
+                                                delta=answer_delta,
+                                            )
+
+                        llm_answer = "".join(answer_chunks).strip()
+                        if not llm_answer:
+                            detail = (
+                                f"上游模型 {candidate_label} 仅返回思考过程、未返回正文"
+                                if candidate_emitted_deltas
+                                else f"上游模型 {candidate_label} 返回为空"
+                            )
+                            trace = ProjectQAToolTrace(
+                                tool="llm_synthesis",
+                                status="unavailable",
+                                detail=(
+                                    detail
+                                    + (
+                                        "，已尝试切换下一个预设"
+                                        if preset_index < len(context["ordered_model_presets"]) - 1
+                                        else "，已回退本地抽取回答"
+                                    )
+                                ),
+                            )
+                            context["tool_trace"].append(trace)
+                            yield encode_project_qa_stream_event("trace", trace=trace.model_dump())
+                            if candidate_emitted_deltas:
+                                yield encode_project_qa_stream_event("reset_deltas")
+                            continue
+
+                        answer = llm_answer
+                        mode = "rag"
+                        model_name = candidate_model_name
+                        model_preset_id = model_preset["id"]
+                        model_label = candidate_label
+                        trace = ProjectQAToolTrace(
+                            tool="llm_synthesis",
+                            status="used",
+                            detail=(
+                                f"使用上游模型 {candidate_label} / {model_name or DEFAULT_CHAT_MODEL} 综合证据生成答辩回答"
+                                if preset_index == 0
+                                else f"首选模型不可用，已切换到 {candidate_label} / {model_name or DEFAULT_CHAT_MODEL} 继续生成答辩回答"
+                            ),
+                        )
+                        context["tool_trace"].append(trace)
+                        yield encode_project_qa_stream_event("trace", trace=trace.model_dump())
+                        break
+                    except Exception as exc:
+                        if candidate_emitted_deltas:
+                            yield encode_project_qa_stream_event("reset_deltas")
+                        logger.warning(
+                            "[project_qa_stream] preset %s failed, trying next: %s",
+                            model_preset["id"],
+                            exc,
+                        )
+                        trace = ProjectQAToolTrace(
+                            tool="llm_synthesis",
+                            status="unavailable",
+                            detail=(
+                                f"上游模型 {candidate_label} 调用失败：{exc}"
+                                + (
+                                    "，已尝试切换下一个预设"
+                                    if preset_index < len(context["ordered_model_presets"]) - 1
+                                    else "，已回退本地抽取回答"
+                                )
+                            ),
+                        )
+                        context["tool_trace"].append(trace)
+                        yield encode_project_qa_stream_event("trace", trace=trace.model_dump())
+            elif payload.useLLM:
+                trace = ProjectQAToolTrace(
+                    tool="llm_synthesis",
+                    status="skipped",
+                    detail="当前没有足够的证据上下文可交给上游模型综合",
+                )
+                context["tool_trace"].append(trace)
+                yield encode_project_qa_stream_event("trace", trace=trace.model_dump())
+
+            if mode == "extractive":
+                yield encode_project_qa_stream_event("status", message="正在整理仓库证据回答")
+                yield encode_project_qa_stream_event("answer_delta", delta=answer)
+
+            response_payload = build_project_qa_response(
+                payload=payload,
+                context=context,
+                answer=answer,
+                mode=mode,
+                model_name=model_name,
+                model_preset_id=model_preset_id,
+                model_label=model_label,
+                start_time=start_time,
+            )
+            effective_sid = context.get("effective_session_id")
+            if effective_sid and answer:
+                save_session_turn(effective_sid, "assistant", answer)
+            yield encode_project_qa_stream_event(
+                "final",
+                response=response_payload.model_dump(exclude_none=True),
+            )
+        except HTTPException as exc:
+            yield encode_project_qa_stream_event("error", message=exc.detail)
+        except Exception as exc:
+            logger.exception("[project_qa_stream] unexpected error")
+            yield encode_project_qa_stream_event("error", message=str(exc) or "问答流失败")
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="application/x-ndjson",
+        headers={"Cache-Control": "no-store"},
     )
 
 
@@ -2239,10 +3388,7 @@ async def chat_completions(
         async with httpx.AsyncClient(timeout=UPSTREAM_CHAT_TIMEOUT_SECONDS) as client:
             response = await client.post(
                 f"{api_base}/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json",
-                },
+                headers=build_upstream_chat_headers(api_key),
                 json={
                     "model": model_name,
                     "messages": payload.messages,
