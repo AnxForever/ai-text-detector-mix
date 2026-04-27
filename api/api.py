@@ -2353,18 +2353,20 @@ def build_project_qa_messages(
         {
             "role": "system",
             "content": (
-                "你是这个仓库的项目说明 Copilot agent。"
-                f"当前可参考的项目背景与学生身份：{speaker_profile}"
+                "你是这个项目的讲解助手，面向答辩评委和指导老师。"
+                f"项目背景与学生身份：{speaker_profile}"
                 "你只能根据给定的仓库证据回答，不要编造仓库里没有出现的事实。"
                 f"当前模式是 {agent_mode}。{mode_instruction}"
                 f"当前回答模板是：{answer_frame_title}。{answer_frame_instruction}"
                 f"{answer_length_instruction}{speaking_style_instruction}"
-                "默认使用客观说明口吻，像在向不了解项目的读者解释项目，而不是总用第一人称。"
-                "只有当问题明显是在准备第一人称表达，比如‘我该怎么说’‘我该怎么回答’，再切换成第一人称学生口吻。"
-                "回答使用简体中文，先给结论，再给2到4条依据；"
-                "引用时使用 [1] [2] 这种编号。"
-                "如果证据不足，要直接说当前仓库里没有足够证据支持结论。"
-                "除非问题明确要求，不要附加‘老师继续追问’或类似答辩提示语。"
+                "\n## 回答规范\n"
+                "1. 像学生当面给老师讲解一样自然，不要像百科条目\n"
+                "2. 先给结论，再给 2-4 条依据，每条都要标注来源 [1] [2]\n"
+                "3. 提到具体实现时，标注文件路径（如 `api/api.py:L45`）或用行内代码引用\n"
+                "4. 如果评委问’带我看’或’给我展示’，给出文件路径和关键行号\n"
+                "5. 如果证据不足，直接说’当前仓库里没有足够证据支持这个结论’\n"
+                "6. 默认用客观说明口吻；如果问题明显是’我该怎么说’类，切换第一人称\n"
+                "7. 不要附加’老师继续追问’或’您还可以问’之类的提示语"
             ),
         },
         {
@@ -3133,6 +3135,141 @@ async def delete_session(
     path.unlink()
     _SESSION_LOCKS.pop(session_id, None)
     return {"status": "ok", "deletedSession": session_id}
+
+
+_FILE_VIEW_ALLOWED_DIRS = {
+    "api",
+    "scripts",
+    "docs",
+    "config",
+    "configs",
+    "frontend/app",
+    "frontend/components",
+    "frontend/lib",
+}
+_FILE_VIEW_ALLOWED_SUFFIXES = {
+    ".py",
+    ".md",
+    ".txt",
+    ".json",
+    ".yaml",
+    ".yml",
+    ".toml",
+    ".tsx",
+    ".ts",
+}
+_FILE_VIEW_MAX_LINES = 200
+
+
+def _resolve_safe_project_file(rel_path: str) -> Path | None:
+    """Resolve a relative path to a safe project file, preventing traversal."""
+    cleaned = rel_path.strip().lstrip("/\\")
+    if not cleaned or ".." in cleaned.split("/"):
+        return None
+    resolved = (PROJECT_ROOT / cleaned).resolve()
+    try:
+        resolved.relative_to(PROJECT_ROOT)
+    except ValueError:
+        return None
+    if not resolved.is_file():
+        return None
+    if resolved.suffix.lower() not in _FILE_VIEW_ALLOWED_SUFFIXES:
+        return None
+    top_dir = cleaned.split("/")[0]
+    if top_dir not in _FILE_VIEW_ALLOWED_DIRS:
+        return None
+    return resolved
+
+
+@app.get("/api/project-qa/file-content")
+async def get_project_file_content(
+    http_request: Request,
+    path: str = "",
+    start_line: int = 1,
+    end_line: int = 0,
+    x_internal_token: str | None = Header(default=None, alias="X-Internal-Token"),
+) -> dict[str, Any]:
+    verify_internal_token(x_internal_token)
+    if not path:
+        raise HTTPException(status_code=400, detail="path parameter is required")
+    resolved = _resolve_safe_project_file(path)
+    if resolved is None:
+        raise HTTPException(status_code=404, detail="File not found or not accessible")
+    try:
+        content = resolved.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        raise HTTPException(status_code=500, detail=f"Cannot read file: {exc}") from exc
+    lines = content.splitlines()
+    total_lines = len(lines)
+    s = max(1, start_line)
+    e = (
+        min(total_lines, end_line)
+        if end_line > 0
+        else min(total_lines, s + _FILE_VIEW_MAX_LINES - 1)
+    )
+    selected = lines[s - 1 : e]
+    numbered = "\n".join(f"{i:>4} | {line}" for i, line in zip(range(s, e + 1), selected))
+    return {
+        "path": path,
+        "totalLines": total_lines,
+        "startLine": s,
+        "endLine": e,
+        "content": numbered,
+        "truncated": e < total_lines,
+    }
+
+
+_PROJECT_STRUCTURE = {
+    "api/": {
+        "description": "FastAPI 后端服务 — 检测 API + OpenAI 兼容接口 + 项目问答",
+        "key_files": {
+            "api/api.py": "主服务入口：所有端点定义、检测管线、Agent 逻辑",
+            "api/CLAUDE.md": "API 模块文档",
+        },
+    },
+    "scripts/training/": {
+        "description": "模型训练脚本 — BERT 分类器、边界检测器、基线对比实验",
+        "key_files": {
+            "scripts/training/train_bert_improved.py": "BERTTrainer 主训练器",
+            "scripts/training/train_span_detector.py": "Token 级边界检测器训练",
+        },
+    },
+    "scripts/evaluation/": {
+        "description": "评估脚本 — 完整测试集评估、单文本测试、综合对比",
+    },
+    "scripts/data_cleaning/": {
+        "description": "数据清洗 — [SEP] 标记插入、Span 标签生成、训练集构建",
+    },
+    "scripts/generation/": {
+        "description": "AI 文本生成 — 多模型批量生成、混合文本构造",
+    },
+    "datasets/": {
+        "description": "数据集 — 训练/验证/测试集、评估集、反馈闭环数据",
+        "key_files": {"datasets/registry.json": "数据集注册表（18 条元数据记录）"},
+    },
+    "models/": {
+        "description": "训练好的模型权重 — bert_v11c_boundary_fix (分类器) + bert_span_detector (边界检测)",
+    },
+    "docs/": {
+        "description": "项目文档 — 答辩口径、实验日志、计划、论文草稿",
+        "key_files": {
+            "docs/project/DEFENSE_CURRENT_STATUS.md": "答辩口径快照（最新）",
+            "docs/project/ADVISOR_ACADEMIC_QA.md": "60 条答辩问答底稿",
+        },
+    },
+    "frontend/": {
+        "description": "Next.js 前端 — 检测界面 + 项目问答 Advisor 页面",
+    },
+}
+
+
+@app.get("/api/project-qa/project-structure")
+async def get_project_structure(
+    http_request: Request,
+    x_internal_token: str | None = Header(default=None, alias="X-Internal-Token"),
+) -> dict[str, Any]:
+    verify_internal_token(x_internal_token)
+    return {"structure": _PROJECT_STRUCTURE, "root": str(PROJECT_ROOT)}
 
 
 @app.post(
