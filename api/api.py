@@ -4,6 +4,7 @@ import logging
 import os
 import re
 import secrets
+import tempfile
 import time
 import uuid
 from collections import defaultdict, deque
@@ -37,8 +38,12 @@ from scripts.utils.paths import PATHS, PROJECT_ROOT
 from scripts.utils.project_qa import (
     KnowledgeHit,
     ProjectKnowledgeIndex,
+    build_contextual_retrieval_query,
     build_extractive_answer,
+    build_project_decline_answer,
     list_uploaded_project_sources,
+    rewrite_query_with_history,
+    search_qa_v2,
 )
 
 logging.basicConfig(
@@ -64,7 +69,7 @@ EXPOSE_TOKEN_PROBS = os.getenv("DETECTOR_EXPOSE_TOKEN_PROBS", "1").strip().lower
     "on",
 }
 MODEL_VERSION = os.path.basename(CLASSIFIER_MODEL_PATH.rstrip("/\\"))
-DEFAULT_CHAT_MODEL = os.getenv("OPENAI_CHAT_MODEL", "deepseek-ai/deepseek-v3.1")
+DEFAULT_CHAT_MODEL = os.getenv("OPENAI_CHAT_MODEL", "mimo-v2.5-pro")
 DEFAULT_DEFENSE_PROFILE = os.getenv(
     "PROJECT_DEFENSE_PROFILE",
     "我是西安科技大学计算机科学与技术专业本科生包安心，正在做中文AI文本检测方向的毕业设计答辩。",
@@ -163,10 +168,14 @@ def infer_provider_label(api_base: str, model_name: str, fallback_label: str | N
         return "通义千问"
     if "deepseek" in model_lower:
         return "DeepSeek"
+    if "mimo" in model_lower or "xiaomi" in model_lower:
+        return "Xiaomi MiMo"
     if "claude" in model_lower:
         return "Anthropic"
     if "openai" in model_lower or "gpt" in model_lower:
         return "OpenAI"
+    if "xiaomimimo.com" in api_base_lower:
+        return "Xiaomi MiMo"
 
     parsed = urlparse(api_base)
     if parsed.netloc:
@@ -179,11 +188,11 @@ def load_project_qa_model_presets() -> list[dict[str, str]]:
     fallback_preset = {
         "id": "default",
         "label": "默认模型",
-        "api_base": os.getenv("OPENAI_BASE_URL", "https://api.hotaruapi.top/v1").strip(),
+        "api_base": os.getenv("OPENAI_BASE_URL", "https://token-plan-cn.xiaomimimo.com/v1").strip(),
         "api_key": os.getenv("OPENAI_API_KEY", "").strip(),
         "model": DEFAULT_CHAT_MODEL.strip(),
         "provider": infer_provider_label(
-            os.getenv("OPENAI_BASE_URL", "https://api.hotaruapi.top/v1").strip(),
+            os.getenv("OPENAI_BASE_URL", "https://token-plan-cn.xiaomimimo.com/v1").strip(),
             DEFAULT_CHAT_MODEL.strip(),
         ),
     }
@@ -1098,14 +1107,27 @@ class ProjectQARequest(BaseModel):
 
 
 def _qa_cache_key(payload: ProjectQARequest) -> str:
+    history_fingerprint = hashlib.sha256(
+        json.dumps(payload.history, ensure_ascii=False, sort_keys=True).encode()
+    ).hexdigest()[:16]
+    analysis_fingerprint = hashlib.sha256(
+        (payload.analysisText or "").strip().encode()
+    ).hexdigest()[:16]
+    profile_fingerprint = hashlib.sha256(
+        (payload.speakerProfile or "").strip().encode()
+    ).hexdigest()[:16]
     return hashlib.md5(
         json.dumps(
             {
                 "q": payload.question.strip(),
                 "k": payload.topK,
+                "llm": payload.useLLM,
                 "mode": payload.agentMode,
                 "length": payload.answerLength,
                 "style": payload.speakingStyle,
+                "history": history_fingerprint,
+                "analysis": analysis_fingerprint,
+                "profile": profile_fingerprint,
                 "preset": payload.modelPresetId,
                 "sid": payload.sessionId,
             },
@@ -1194,6 +1216,7 @@ class ProjectQAResponse(BaseModel):
     memorySummary: str | None = None
     effectiveSpeakerProfile: str | None = None
     sessionId: str | None = None
+    isGeneralQuestion: bool = False
 
 
 class ProjectQAMaterial(BaseModel):
@@ -1256,6 +1279,11 @@ def infer_domain_hint(text: str) -> str:
     return "general"
 
 
+def pick_binary_result_type(prob_ai: float, prob_human: float) -> Literal["human", "ai"]:
+    """Resolve the detector output to a strict binary label."""
+    return "ai" if prob_ai >= prob_human else "human"
+
+
 def collect_risk_flags(
     text: str,
     confidence: float,
@@ -1295,36 +1323,26 @@ def build_reason_analysis(
 
     if result_type == "ai":
         if score_gap >= 40:
-            signals.append(
-                f"AI倾向明显高于人类倾向（AI {ai_percentage}% / 人类 {human_percentage}%）"
-            )
+            signals.append("AI 特征占优，且整体判定较稳定")
         else:
-            signals.append(
-                f"AI倾向略高于人类倾向（AI {ai_percentage}% / 人类 {human_percentage}%）"
-            )
+            signals.append("AI 特征略占优势，但仍建议结合上下文复核")
     elif result_type == "human":
         if score_gap >= 40:
-            signals.append(
-                f"人类倾向明显高于AI倾向（人类 {human_percentage}% / AI {ai_percentage}%）"
-            )
+            signals.append("人类写作特征占优，且整体判定较稳定")
         else:
-            signals.append(
-                f"人类倾向略高于AI倾向（人类 {human_percentage}% / AI {ai_percentage}%）"
-            )
+            signals.append("人类写作特征略占优势，但仍建议结合上下文复核")
     else:
         if score_gap <= 15:
-            signals.append(
-                f"AI与人类倾向接近（AI {ai_percentage}% / 人类 {human_percentage}%），未形成单边优势"
-            )
+            signals.append("文本同时呈现两类特征，主导优势不够明显")
         else:
-            signals.append(
-                f"文本同时出现两类特征（AI {ai_percentage}% / 人类 {human_percentage}%）"
-            )
+            signals.append("文本同时出现两类特征，但其中一侧仍保持主导")
 
     if boundary_sentence_index is not None:
-        signals.append(f"第 {boundary_sentence_index + 1} 句附近检测到明显风格切换")
+        signals.append(
+            f"第 {boundary_sentence_index + 1} 句附近检测到明显风格切换，可作为辅助分析线索"
+        )
     elif result_type != "mixed":
-        signals.append("当前结果未发现明确的混合边界，整体风格相对连续")
+        signals.append("当前结果未发现明确的风格切换边界，整体风格相对连续")
 
     domain_hint_messages = {
         "formal": "文本偏正式通知/公告语体，属于规则感较强的写作场景",
@@ -1340,7 +1358,7 @@ def build_reason_analysis(
         "extreme_length": "文本超长，局部段落可能对整体判断产生扰动",
         "low_confidence": "当前样本处于低置信区间，结论应以人工复核为准",
         "template_like": "文本出现模板化或提示词式表达，这是模型重点关注的高风险信号",
-        "mixed_without_boundary": "模型认为可能存在混合特征，但暂未定位到清晰边界",
+        "mixed_without_boundary": "文本同时呈现两类特征，但暂未定位到清晰边界",
     }
     for flag in risk_flags:
         message = risk_flag_messages.get(flag)
@@ -1348,26 +1366,14 @@ def build_reason_analysis(
             signals.append(message)
 
     if result_type == "ai":
-        summary = (
-            f"模型当前更倾向判为 AI 生成，主要依据是 AI 倾向 {ai_percentage}% "
-            f"高于人类倾向 {human_percentage}%。"
-        )
+        summary = f"模型当前更倾向判为 AI 生成，当前置信度为 {confidence:.1f}%。"
     elif result_type == "human":
-        summary = (
-            f"模型当前更倾向判为人类写作，主要依据是人类倾向 {human_percentage}% "
-            f"高于 AI 倾向 {ai_percentage}%。"
-        )
+        summary = f"模型当前更倾向判为人类写作，当前置信度为 {confidence:.1f}%。"
     else:
-        if boundary_sentence_index is not None:
-            summary = (
-                f"模型当前更倾向判为混合文本，因为第 {boundary_sentence_index + 1} 句附近"
-                "出现了风格切换。"
-            )
-        else:
-            summary = (
-                f"模型当前更倾向判为混合文本，因为 AI 倾向 {ai_percentage}% 与人类倾向 "
-                f"{human_percentage}% 接近，未形成稳定单边判断。"
-            )
+        summary = (
+            "系统当前采用严格二分类输出。尽管文本中可能同时出现两类特征，"
+            f"本次仍按更高主导倾向返回结果，当前置信度为 {confidence:.1f}%。"
+        )
 
     if "low_confidence" in risk_flags:
         summary += " 当前置信度偏低，建议优先采用人工确认。"
@@ -1406,18 +1412,26 @@ def build_feedback_override_response(
     processing_time: int,
 ) -> DetectionResponse:
     """Build a response from an exact-match manual correction record."""
-    result_type = override["confirmed_label"]
+    confirmed_label = override["confirmed_label"]
     boundary_sentence_index = override.get("boundary")
     final_sentences = split_sentences(text)
+    stored_ai_percentage = override.get("ai_percentage")
+    stored_human_percentage = override.get("human_percentage")
+    ai_percentage = stored_ai_percentage if isinstance(stored_ai_percentage, int) else None
+    human_percentage = (
+        stored_human_percentage if isinstance(stored_human_percentage, int) else None
+    )
 
-    if result_type == "human":
+    if confirmed_label == "human":
+        result_type = "human"
         human_percentage = 100
         ai_percentage = 0
         sentence_results = [
             SentenceResult(text=sentence, isAI=False, confidence=100.0)
             for sentence in final_sentences
         ]
-    elif result_type == "ai":
+    elif confirmed_label == "ai":
+        result_type = "ai"
         human_percentage = 0
         ai_percentage = 100
         sentence_results = [
@@ -1425,8 +1439,6 @@ def build_feedback_override_response(
             for sentence in final_sentences
         ]
     else:
-        human_percentage = 50
-        ai_percentage = 50
         if boundary_sentence_index is not None and not (
             0 < boundary_sentence_index < len(final_sentences)
         ):
@@ -1456,6 +1468,15 @@ def build_feedback_override_response(
                     )
                 )
 
+        if human_percentage is None or ai_percentage is None:
+            ai_sentence_count = sum(1 for sentence in sentence_results if sentence.isAI)
+            human_sentence_count = max(len(sentence_results) - ai_sentence_count, 0)
+            total_count = max(len(sentence_results), 1)
+            ai_percentage = int(round(ai_sentence_count * 100 / total_count))
+            human_percentage = 100 - ai_percentage
+
+        result_type = pick_binary_result_type(ai_percentage / 100, human_percentage / 100)
+
     risk_flags = ["feedback_override_exact_match"]
     if boundary_sentence_index is not None:
         risk_flags.append("boundary_from_manual_feedback")
@@ -1476,6 +1497,8 @@ def build_feedback_override_response(
         f"沿用人工确认标签：{type_zh}",
         "该覆盖仅对 exact match 生效，不对润色、续写或改写文本生效",
     ]
+    if confirmed_label == "mixed":
+        reason_signals.append("历史记录原为混合标签，当前界面已按主导倾向折算为二分类结果")
     if boundary_sentence_index is not None:
         reason_signals.append(f"沿用历史边界信息：第 {boundary_sentence_index + 1} 句附近")
 
@@ -1536,16 +1559,11 @@ def detect_text(
     ai_percentage = int(prob_ai * 100)
     human_percentage = int(prob_human * 100)
 
-    result_type = "mixed"
     boundary_char = None
-
-    if prob_ai >= DECISION_THRESHOLD:
-        result_type = "ai"
-    elif prob_human >= DECISION_THRESHOLD:
-        result_type = "human"
+    result_type = pick_binary_result_type(prob_ai, prob_human)
 
     # Span detector now triggers by length threshold rather than classifier result.
-    # This catches mixed texts where the classifier confidently mis-labels one side.
+    # It remains auxiliary evidence and no longer upgrades the top-level label.
     token_spans: list[dict[str, Any]] = []
     if len(text) >= SPAN_TRIGGER_MIN_CHARS:
         boundary_res = detector.detect_boundary(text)
@@ -1566,11 +1584,9 @@ def detect_text(
             boundary_sentence_index = idx
         running_char_count += sent_len
 
-    # If the span detector found a valid boundary with content on both sides,
-    # promote the result to "mixed" regardless of the classifier's single label.
-    if boundary_sentence_index is not None and 0 < boundary_sentence_index < len(final_sentences):
-        result_type = "mixed"
-    else:
+    if not (
+        boundary_sentence_index is not None and 0 < boundary_sentence_index < len(final_sentences)
+    ):
         # No valid boundary — clear stale boundary_char to avoid misleading downstream.
         boundary_char = None
         boundary_sentence_index = None
@@ -1586,7 +1602,7 @@ def detect_text(
         if sent_probs is not None:
             sent_prob_ai = sent_probs["prob_ai"]
             sent_confidence = sent_probs["confidence"] * 100
-            if result_type == "mixed" and boundary_sentence_index is not None:
+            if boundary_sentence_index is not None:
                 is_ai = idx >= boundary_sentence_index
             else:
                 is_ai = sent_prob_ai >= DECISION_THRESHOLD
@@ -1739,12 +1755,7 @@ def detect_text_batch(
         for (idx, text), probs in zip(cleaned, batch_probs, strict=True):
             prob_ai = probs["prob_ai"]
             prob_human = probs["prob_human"]
-            if prob_ai >= DECISION_THRESHOLD:
-                item_type = "ai"
-            elif prob_human >= DECISION_THRESHOLD:
-                item_type = "human"
-            else:
-                item_type = "mixed"
+            item_type = pick_binary_result_type(prob_ai, prob_human)
             results[idx] = BatchItemResult(
                 index=idx,
                 type=item_type,
@@ -1825,9 +1836,32 @@ class ChatRequest(BaseModel):
 
 
 AGENT_MODE_KEYWORDS: dict[str, tuple[str, ...]] = {
-    "metrics": ("准确率", "f1", "ece", "指标", "多少", "性能"),
-    "critical": ("局限", "缺点", "风险", "不足", "质疑", "过拟合"),
-    "technical": ("原理", "为什么", "架构", "bert", "sep", "边界", "训练", "技术"),
+    "metrics": (
+        "准确率",
+        "f1",
+        "ece",
+        "指标",
+        "多少",
+        "性能",
+        "召回率",
+        "精确率",
+        "混淆矩阵",
+    ),
+    "critical": ("局限", "缺点", "风险", "不足", "质疑", "过拟合", "数据泄露", "分布外"),
+    "technical": (
+        "原理",
+        "为什么",
+        "架构",
+        "bert",
+        "sep",
+        "边界",
+        "训练",
+        "技术",
+        "数据治理",
+        "数据清洗",
+        "训练集",
+        "数据集",
+    ),
 }
 
 _AGENT_MODE_NAMES = ("metrics", "critical", "technical", "defense")
@@ -1853,7 +1887,7 @@ async def _llm_classify_agent_mode(question: str) -> str | None:
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         return None
-    api_base = os.getenv("OPENAI_BASE_URL", "https://api.hotaruapi.top/v1")
+    api_base = os.getenv("OPENAI_BASE_URL", "https://token-plan-cn.xiaomimimo.com/v1")
     model_name = DEFAULT_CHAT_MODEL.strip()
     if not model_name:
         return None
@@ -2098,13 +2132,7 @@ def build_project_local_answer(
     ):
         return "根据当前运行时模型信息，可概括为：\n" + model_snapshot.replace("\n", "；") + "。"
 
-    answer = build_project_local_answer(
-        question,
-        agent_mode=agent_mode,
-        answer_frame_title=answer_frame_title,
-        hits=hits,
-        model_snapshot=model_snapshot,
-    )
+    answer = build_extractive_answer(question, hits)
     if answer.startswith("根据仓库当前资料，可以先这样回答："):
         answer = answer.replace(
             "根据仓库当前资料，可以先这样回答：", "根据仓库当前资料，可概括为：", 1
@@ -2125,11 +2153,7 @@ def run_project_agent_live_detection(text: str) -> str | None:
     confidence = float(cls_result["confidence"]) * 100
     prob_ai = float(cls_result["prob_ai"])
     prob_human = float(cls_result["prob_human"])
-    result_type = "mixed"
-    if prob_ai >= DECISION_THRESHOLD:
-        result_type = "ai"
-    elif prob_human >= DECISION_THRESHOLD:
-        result_type = "human"
+    result_type = pick_binary_result_type(prob_ai, prob_human)
 
     boundary_hint = "未触发边界检测"
     if len(cleaned) >= SPAN_TRIGGER_MIN_CHARS:
@@ -2212,7 +2236,16 @@ def select_project_answer_frame(
 
     if any(
         token in lowered
-        for token in ("30 秒", "30秒", "一分钟", "概括", "介绍整个项目", "整体介绍")
+        for token in (
+            "30 秒",
+            "30秒",
+            "一分钟",
+            "概括",
+            "介绍整个项目",
+            "整体介绍",
+            "介绍一下",
+            "项目介绍",
+        )
     ):
         return (
             "30秒总述",
@@ -2327,6 +2360,7 @@ def build_project_qa_messages(
     model_snapshot: str | None,
     live_detection_summary: str | None,
     tool_trace: list[ProjectQAToolTrace],
+    is_general_question: bool = False,
 ) -> list[dict[str, str]]:
     """Create an evidence-grounded prompt for the defense copilot agent."""
     evidence_text = "\n\n".join(evidence_blocks)
@@ -2349,24 +2383,38 @@ def build_project_qa_messages(
         user_sections.append(f"本轮工具轨迹：\n{tool_text}")
     user_sections.append(f"仓库证据：\n{evidence_text or '当前未命中仓库证据。'}")
 
+    if is_general_question:
+        core_constraint = (
+            "这个问题不在项目仓库知识库范围内，你可以用自己的知识来回答。\n"
+            "回答开头注明：「这个问题不在我的项目知识库范围内，以下是我根据已有知识的回答：」\n"
+            "然后正常回答用户的问题。如果问题与 AI 文本检测、NLP、机器学习相关，"
+            "可以适当联系本项目的经验来补充说明。"
+        )
+    else:
+        core_constraint = "你只能根据给定的仓库证据回答，不要编造仓库里没有出现的事实。\n\n"
+
     return [
         {
             "role": "system",
             "content": (
-                "你是这个项目的讲解助手，面向答辩评委和指导老师。"
-                f"项目背景与学生身份：{speaker_profile}"
-                "你只能根据给定的仓库证据回答，不要编造仓库里没有出现的事实。"
-                f"当前模式是 {agent_mode}。{mode_instruction}"
-                f"当前回答模板是：{answer_frame_title}。{answer_frame_instruction}"
-                f"{answer_length_instruction}{speaking_style_instruction}"
-                "\n## 回答规范\n"
+                "## 角色\n"
+                f"你是这个项目的讲解助手，面向答辩评委和指导老师。\n"
+                f"项目背景与学生身份：{speaker_profile}\n\n"
+                "## 核心约束\n"
+                f"{core_constraint}\n\n"
+                f"## 当前模式：{agent_mode}\n"
+                f"{mode_instruction}\n\n"
+                f"## 回答模板：{answer_frame_title}\n"
+                f"{answer_frame_instruction}\n\n"
+                f"{answer_length_instruction}{speaking_style_instruction}\n\n"
+                "## 回答规范\n"
                 "1. 像学生当面给老师讲解一样自然，不要像百科条目\n"
                 "2. 先给结论，再给 2-4 条依据，每条都要标注来源 [1] [2]\n"
                 "3. 提到具体实现时，标注文件路径（如 `api/api.py:L45`）或用行内代码引用\n"
-                "4. 如果评委问’带我看’或’给我展示’，给出文件路径和关键行号\n"
-                "5. 如果证据不足，直接说’当前仓库里没有足够证据支持这个结论’\n"
-                "6. 默认用客观说明口吻；如果问题明显是’我该怎么说’类，切换第一人称\n"
-                "7. 不要附加’老师继续追问’或’您还可以问’之类的提示语"
+                "4. 如果评委问'带我看'或'给我展示'，给出文件路径和关键行号\n"
+                "5. 如果证据不足，直接说'当前仓库里没有足够证据支持这个结论'\n"
+                "6. 默认用客观说明口吻；如果问题明显是'我该怎么说'类，切换第一人称\n"
+                "7. 不要附加'老师继续追问'或'您还可以问'之类的提示语"
             ),
         },
         {
@@ -2374,6 +2422,129 @@ def build_project_qa_messages(
             "content": "\n\n".join(user_sections),
         },
     ]
+
+
+def is_reasoning_heavy_chat_model(model_name: str | None) -> bool:
+    """Return whether the upstream chat model tends to spend many reasoning tokens."""
+    normalized = (model_name or "").strip().lower()
+    if not normalized:
+        return False
+    return any(token in normalized for token in ("mimo", "deepseek-r1", "reasoner", "thinking"))
+
+
+def compute_project_qa_max_tokens(
+    payload: ProjectQARequest,
+    model_name: str | None,
+) -> int:
+    """Choose a larger response budget for reasoning-heavy QA models."""
+    base_by_length = {
+        "brief": 900,
+        "standard": 1400,
+        "detailed": 1800,
+    }
+    target = base_by_length[payload.answerLength] + max(payload.topK - 3, 0) * 80
+    if is_reasoning_heavy_chat_model(model_name):
+        target += 500
+    return max(256, min(target, CHAT_MAX_TOKENS))
+
+
+def should_retry_project_qa_completion(answer: str, finish_reason: str | None) -> bool:
+    """Detect whether an LLM answer likely stopped because it hit the token limit."""
+    normalized_finish = (finish_reason or "").strip().lower()
+    if normalized_finish == "length":
+        return True
+
+    trimmed = answer.rstrip()
+    if len(trimmed) < 80:
+        return False
+
+    last_char = trimmed[-1]
+    if last_char in "。！？!?；;”\"）)]】》":
+        return False
+
+    if last_char in "，、：:（([{《“\"'":
+        return True
+
+    dangling_suffixes = (
+        "数据、",
+        "算法、",
+        "模型、",
+        "指标、",
+        "实验、",
+        "优化、",
+        "结论、",
+        "首先",
+        "首先，",
+        "其次",
+        "其次，",
+        "再次",
+        "再次，",
+        "最后",
+        "最后，",
+        "第一",
+        "第二",
+        "第三",
+    )
+    if trimmed.endswith(dangling_suffixes):
+        return True
+
+    tail = trimmed[-48:]
+    return bool(
+        re.search(
+            r"(下面我从|主要从|可以从|包括|分为|分别是|主要有|例如|比如)[^。！？!?；;]{0,24}$",
+            tail,
+        )
+    )
+
+
+def build_project_qa_continuation_messages(
+    base_messages: list[dict[str, str]],
+    partial_answer: str,
+) -> list[dict[str, str]]:
+    """Ask the upstream model to continue a truncated answer without repeating itself."""
+    return [
+        *base_messages,
+        {"role": "assistant", "content": partial_answer},
+        {
+            "role": "user",
+            "content": (
+                "你上一条回答被截断了。不要重复前文，也不要解释原因。"
+                "请直接从中断处继续，补完当前回答并自然收尾。"
+                "继续使用同样口吻，只输出续写部分正文。"
+            ),
+        },
+    ]
+
+
+async def continue_project_qa_completion(
+    *,
+    client: httpx.AsyncClient,
+    candidate_api_base: str,
+    candidate_api_key: str,
+    candidate_model_name: str,
+    base_messages: list[dict[str, str]],
+    partial_answer: str,
+    max_tokens: int,
+) -> tuple[str, str | None]:
+    """Request one continuation segment when the first QA answer was truncated."""
+    response = await client.post(
+        f"{candidate_api_base}/chat/completions",
+        headers=build_upstream_chat_headers(candidate_api_key),
+        json={
+            "model": candidate_model_name,
+            "messages": build_project_qa_continuation_messages(base_messages, partial_answer),
+            "temperature": 0.2,
+            "max_tokens": max(256, min(max_tokens, CHAT_MAX_TOKENS)),
+        },
+    )
+    response.raise_for_status()
+
+    body = response.json()
+    choice = (body.get("choices") or [{}])[0]
+    message = choice.get("message", {})
+    continued_answer = extract_openai_message_field(message, "content").strip()
+    finish_reason = choice.get("finish_reason")
+    return continued_answer, finish_reason if isinstance(finish_reason, str) else None
 
 
 def normalize_openai_text_payload(payload: Any) -> str:
@@ -2617,11 +2788,34 @@ def build_project_answer_evidence_references(
 # ---------------------------------------------------------------------------
 # Server-side session storage (file-backed, lightweight)
 # ---------------------------------------------------------------------------
-SESSION_DIR = Path(os.getenv("DC_SESSION_DIR", str(PROJECT_ROOT / "sessions")))
+def _default_session_dir() -> Path:
+    """Return a writable-by-default location for lightweight project QA sessions."""
+    configured = os.getenv("DC_SESSION_DIR", "").strip()
+    if configured:
+        return Path(configured)
+    return Path(tempfile.gettempdir()) / "datacollection" / "sessions"
+
+
+SESSION_DIR = _default_session_dir()
 SESSION_MAX_TURNS = 20
 SESSION_TTL_SECONDS = int(os.getenv("DC_SESSION_TTL_SECONDS", "86400"))
 _SESSION_LOCKS: dict[str, Lock] = defaultdict(Lock)
 _safe_session_id_re = re.compile(r"^[a-zA-Z0-9_-]{4,64}$")
+_SESSION_STORAGE_WARNING_EMITTED = False
+
+
+def _warn_session_storage_unavailable(action: str, error: OSError) -> None:
+    """Log session storage failures once; session persistence is best-effort."""
+    global _SESSION_STORAGE_WARNING_EMITTED
+    if _SESSION_STORAGE_WARNING_EMITTED:
+        return
+    _SESSION_STORAGE_WARNING_EMITTED = True
+    logger.warning(
+        "Project QA session storage unavailable while %s at %s: %s",
+        action,
+        SESSION_DIR,
+        error,
+    )
 
 
 def _session_path(session_id: str) -> Path:
@@ -2636,10 +2830,10 @@ def load_session_history(session_id: str) -> list[dict[str, str]]:
     if not _is_safe_session_id(session_id):
         return []
     path = _session_path(session_id)
-    if not path.exists():
-        return []
     turns: list[dict[str, str]] = []
     try:
+        if not path.exists():
+            return []
         for line in path.read_text(encoding="utf-8").splitlines():
             line = line.strip()
             if not line:
@@ -2647,54 +2841,75 @@ def load_session_history(session_id: str) -> list[dict[str, str]]:
             entry = json.loads(line)
             if isinstance(entry, dict) and "role" in entry and "content" in entry:
                 turns.append({"role": str(entry["role"]), "content": str(entry["content"])})
-    except (OSError, json.JSONDecodeError):
+    except OSError as exc:
+        _warn_session_storage_unavailable("loading", exc)
+        return []
+    except json.JSONDecodeError:
         return []
     return turns[-SESSION_MAX_TURNS:]
 
 
 def cleanup_expired_sessions() -> int:
     """Remove session files older than SESSION_TTL_SECONDS. Returns count removed."""
-    if not SESSION_DIR.exists():
-        return 0
     now = time.time()
     removed = 0
-    for path in SESSION_DIR.glob("*.jsonl"):
-        if now - path.stat().st_mtime > SESSION_TTL_SECONDS:
-            path.unlink(missing_ok=True)
-            removed += 1
+    try:
+        if not SESSION_DIR.exists():
+            return 0
+        for path in SESSION_DIR.glob("*.jsonl"):
+            try:
+                if now - path.stat().st_mtime > SESSION_TTL_SECONDS:
+                    path.unlink(missing_ok=True)
+                    removed += 1
+            except OSError as exc:
+                _warn_session_storage_unavailable("cleaning", exc)
+    except OSError as exc:
+        _warn_session_storage_unavailable("cleaning", exc)
     return removed
 
 
 def list_active_sessions() -> list[dict[str, Any]]:
     """Return metadata for all non-expired session files."""
-    if not SESSION_DIR.exists():
-        return []
     now = time.time()
     sessions: list[dict[str, Any]] = []
-    for path in sorted(SESSION_DIR.glob("*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True):
-        mtime = path.stat().st_mtime
-        if now - mtime > SESSION_TTL_SECONDS:
-            continue
-        turns = load_session_history(path.stem)
-        sessions.append(
-            {
-                "sessionId": path.stem,
-                "turnCount": len(turns),
-                "lastActivity": datetime.fromtimestamp(mtime).isoformat(),
-            }
-        )
+    try:
+        if not SESSION_DIR.exists():
+            return []
+        paths = sorted(SESSION_DIR.glob("*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True)
+        for path in paths:
+            try:
+                mtime = path.stat().st_mtime
+            except OSError as exc:
+                _warn_session_storage_unavailable("listing", exc)
+                continue
+            if now - mtime > SESSION_TTL_SECONDS:
+                continue
+            turns = load_session_history(path.stem)
+            sessions.append(
+                {
+                    "sessionId": path.stem,
+                    "turnCount": len(turns),
+                    "lastActivity": datetime.fromtimestamp(mtime).isoformat(),
+                }
+            )
+    except OSError as exc:
+        _warn_session_storage_unavailable("listing", exc)
+        return []
     return sessions[:50]
 
 
 def save_session_turn(session_id: str, role: str, content: str) -> None:
     if not _is_safe_session_id(session_id):
         return
-    SESSION_DIR.mkdir(parents=True, exist_ok=True)
     path = _session_path(session_id)
     lock = _SESSION_LOCKS[session_id]
-    with lock:
-        with path.open("a", encoding="utf-8") as f:
-            f.write(json.dumps({"role": role, "content": content}, ensure_ascii=False) + "\n")
+    try:
+        SESSION_DIR.mkdir(parents=True, exist_ok=True)
+        with lock:
+            with path.open("a", encoding="utf-8") as f:
+                f.write(json.dumps({"role": role, "content": content}, ensure_ascii=False) + "\n")
+    except OSError as exc:
+        _warn_session_storage_unavailable("saving", exc)
 
 
 def merge_session_history(
@@ -2714,7 +2929,12 @@ def merge_session_history(
 # ---------------------------------------------------------------------------
 # Agent retrieval loop: multi-round retrieval with query decomposition
 # ---------------------------------------------------------------------------
-AGENT_MAX_RETRIEVAL_ROUNDS = int(os.getenv("DC_AGENT_MAX_ROTRIEVAL_ROUNDS", "2"))
+AGENT_MAX_RETRIEVAL_ROUNDS = int(
+    os.getenv(
+        "DC_AGENT_MAX_RETRIEVAL_ROUNDS",
+        os.getenv("DC_AGENT_MAX_ROTRIEVAL_ROUNDS", "2"),
+    )
+)
 AGENT_EVIDENCE_MIN_HITS = int(os.getenv("DC_AGENT_EVIDENCE_MIN_HITS", "3"))
 AGENT_EVIDENCE_TOP_SCORE = float(os.getenv("DC_AGENT_EVIDENCE_TOP_SCORE", "0.3"))
 AGENT_ENABLE_SELFCHECK = os.getenv("DC_AGENT_ENABLE_SELFCHECK", "0").strip().lower() in {
@@ -2729,7 +2949,7 @@ async def _decompose_question(question: str) -> list[str]:
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         return []
-    api_base = os.getenv("OPENAI_BASE_URL", "https://api.hotaruapi.top/v1")
+    api_base = os.getenv("OPENAI_BASE_URL", "https://token-plan-cn.xiaomimimo.com/v1")
     model_name = DEFAULT_CHAT_MODEL.strip()
     if not model_name:
         return []
@@ -2794,6 +3014,16 @@ async def agent_retrieve_loop(
     """Multi-round retrieval: original query → check → decompose → re-retrieve."""
     all_traces: list[ProjectQAToolTrace] = []
 
+    if build_project_decline_answer(question):
+        all_traces.append(
+            ProjectQAToolTrace(
+                tool="repository_search",
+                status="skipped",
+                detail="问题不在项目答辩知识库范围内，跳过仓库检索",
+            )
+        )
+        return [], all_traces
+
     # Round 1: Direct retrieval with the original question
     hits = knowledge_index.search(question, top_k=top_k)
     all_traces.append(
@@ -2852,7 +3082,7 @@ async def selfcritique_answer(
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         return None
-    api_base = os.getenv("OPENAI_BASE_URL", "https://api.hotaruapi.top/v1")
+    api_base = os.getenv("OPENAI_BASE_URL", "https://token-plan-cn.xiaomimimo.com/v1")
     model_name = DEFAULT_CHAT_MODEL.strip()
     if not model_name:
         return None
@@ -2914,9 +3144,13 @@ async def prepare_project_qa_context(payload: ProjectQARequest, question: str) -
     speaker_profile = resolve_project_speaker_profile(payload.speakerProfile)
     history_summary = summarize_project_agent_history(merged_history)
 
+    # Multi-turn query rewriting: expand referential questions with context
+    rewritten_question = rewrite_query_with_history(question, merged_history)
+    retrieval_question = build_contextual_retrieval_query(rewritten_question, merged_history)
+
     knowledge_index = get_project_knowledge_index(force_refresh=payload.forceRefresh)
     hits, retrieval_traces = await agent_retrieve_loop(
-        question, knowledge_index, top_k=payload.topK
+        retrieval_question, knowledge_index, top_k=payload.topK
     )
     evidence_blocks = build_project_agent_evidence_blocks(hits)
     sources = [
@@ -2924,6 +3158,30 @@ async def prepare_project_qa_context(payload: ProjectQARequest, question: str) -
         for hit in hits
     ]
     tool_trace: list[ProjectQAToolTrace] = list(retrieval_traces)
+
+    # QA v2: inject curated Q&A matches into evidence for LLM
+    qa_v2_matches = search_qa_v2(retrieval_question, top_k=2)
+    if qa_v2_matches:
+        qa_v2_block = "## 知识库精准匹配（QA v2）\n"
+        for qa in qa_v2_matches:
+            qa_v2_block += f"Q: {qa['question']}\nA: {qa['answer']}\n\n"
+        evidence_blocks.insert(0, qa_v2_block)
+        tool_trace.append(
+            ProjectQAToolTrace(
+                tool="qa_v2_search",
+                status="used",
+                detail=f"命中 {len(qa_v2_matches)} 条精准 Q&A：{' / '.join(qa['question'][:20] for qa in qa_v2_matches)}",
+            )
+        )
+
+    if rewritten_question != question or retrieval_question != rewritten_question:
+        tool_trace.append(
+            ProjectQAToolTrace(
+                tool="conversation_retrieval_rewrite",
+                status="used",
+                detail="将最近对话与当前追问合并后参与检索",
+            )
+        )
 
     if history_summary:
         tool_trace.append(
@@ -2971,11 +3229,17 @@ async def prepare_project_qa_context(payload: ProjectQARequest, question: str) -
         if preset["id"] != requested_model_preset["id"]
     ]
 
-    answer = build_extractive_answer(question, hits)
-    if not sources and live_detection_summary:
-        answer = f"当前仓库证据检索较少，但实时检测工具给出的结果是：{live_detection_summary}"
-    elif not sources and model_snapshot:
-        answer = f"当前仓库证据检索较少，不过运行时模型信息可以先这样回答：\n{model_snapshot}"
+    answer = build_extractive_answer(retrieval_question, hits)
+    is_general_question = False
+    if not sources and not model_snapshot and not live_detection_summary:
+        decline = build_project_decline_answer(question)
+        if decline:
+            is_general_question = True
+            answer = ""
+        else:
+            # No KB hits but not explicitly out-of-scope — let LLM try
+            is_general_question = True
+            answer = ""
 
     return {
         "agent_mode": agent_mode,
@@ -2985,6 +3249,7 @@ async def prepare_project_qa_context(payload: ProjectQARequest, question: str) -
         "answer_length_instruction": answer_length_instruction,
         "evidence_blocks": evidence_blocks,
         "hits": hits,
+        "is_general_question": is_general_question,
         "history_summary": history_summary,
         "knowledge_index": knowledge_index,
         "live_detection_summary": live_detection_summary,
@@ -3043,6 +3308,7 @@ def build_project_qa_response(
         memorySummary=context["history_summary"],
         effectiveSpeakerProfile=context["speaker_profile"],
         sessionId=context.get("effective_session_id"),
+        isGeneralQuestion=context["is_general_question"],
     )
 
 
@@ -3143,9 +3409,13 @@ _FILE_VIEW_ALLOWED_DIRS = {
     "docs",
     "config",
     "configs",
+    "datasets/eval",
+    "datasets/project_qa_uploads",
+    "evaluation_results",
     "frontend/app",
     "frontend/components",
     "frontend/lib",
+    "models",
 }
 _FILE_VIEW_ALLOWED_SUFFIXES = {
     ".py",
@@ -3163,7 +3433,7 @@ _FILE_VIEW_MAX_LINES = 200
 
 def _resolve_safe_project_file(rel_path: str) -> Path | None:
     """Resolve a relative path to a safe project file, preventing traversal."""
-    cleaned = rel_path.strip().lstrip("/\\")
+    cleaned = rel_path.strip().lstrip("/\\").replace("\\", "/")
     if not cleaned or ".." in cleaned.split("/"):
         return None
     resolved = (PROJECT_ROOT / cleaned).resolve()
@@ -3175,8 +3445,13 @@ def _resolve_safe_project_file(rel_path: str) -> Path | None:
         return None
     if resolved.suffix.lower() not in _FILE_VIEW_ALLOWED_SUFFIXES:
         return None
-    top_dir = cleaned.split("/")[0]
-    if top_dir not in _FILE_VIEW_ALLOWED_DIRS:
+    allowed = False
+    for allowed_dir in _FILE_VIEW_ALLOWED_DIRS:
+        normalized_allowed = allowed_dir.rstrip("/")
+        if cleaned == normalized_allowed or cleaned.startswith(f"{normalized_allowed}/"):
+            allowed = True
+            break
+    if not allowed:
         return None
     return resolved
 
@@ -3365,13 +3640,13 @@ async def project_qa(
     model_preset_id = requested_model_preset["id"]
     model_label = requested_model_preset["label"]
     if payload.useLLM and (
-        context["sources"] or context["model_snapshot"] or context["live_detection_summary"]
+        context["sources"] or context["model_snapshot"] or context["live_detection_summary"] or context["is_general_question"]
     ):
         for preset_index, model_preset in enumerate(context["ordered_model_presets"]):
             candidate_api_key = model_preset.get("api_key") or resolve_api_key(authorization)
             candidate_api_base = model_preset.get("api_base") or os.getenv(
                 "OPENAI_BASE_URL",
-                "https://api.hotaruapi.top/v1",
+                "https://token-plan-cn.xiaomimimo.com/v1",
             )
             candidate_model_name = model_preset.get("model") or DEFAULT_CHAT_MODEL.strip() or None
             candidate_label = model_preset["label"]
@@ -3387,28 +3662,31 @@ async def project_qa(
                 continue
 
             try:
+                base_messages = build_project_qa_messages(
+                    question=question,
+                    evidence_blocks=context["evidence_blocks"],
+                    agent_mode=context["agent_mode"],
+                    answer_frame_title=context["answer_frame_title"],
+                    answer_frame_instruction=context["answer_frame_instruction"],
+                    answer_length_instruction=context["answer_length_instruction"],
+                    speaking_style_instruction=context["speaking_style_instruction"],
+                    speaker_profile=context["speaker_profile"],
+                    history_summary=context["history_summary"],
+                    model_snapshot=context["model_snapshot"],
+                    live_detection_summary=context["live_detection_summary"],
+                    tool_trace=context["tool_trace"],
+                    is_general_question=context["is_general_question"],
+                )
+                max_tokens = compute_project_qa_max_tokens(payload, candidate_model_name)
                 async with httpx.AsyncClient(timeout=UPSTREAM_CHAT_TIMEOUT_SECONDS) as client:
                     response = await client.post(
                         f"{candidate_api_base}/chat/completions",
                         headers=build_upstream_chat_headers(candidate_api_key),
                         json={
                             "model": candidate_model_name,
-                            "messages": build_project_qa_messages(
-                                question=question,
-                                evidence_blocks=context["evidence_blocks"],
-                                agent_mode=context["agent_mode"],
-                                answer_frame_title=context["answer_frame_title"],
-                                answer_frame_instruction=context["answer_frame_instruction"],
-                                answer_length_instruction=context["answer_length_instruction"],
-                                speaking_style_instruction=context["speaking_style_instruction"],
-                                speaker_profile=context["speaker_profile"],
-                                history_summary=context["history_summary"],
-                                model_snapshot=context["model_snapshot"],
-                                live_detection_summary=context["live_detection_summary"],
-                                tool_trace=context["tool_trace"],
-                            ),
+                            "messages": base_messages,
                             "temperature": 0.2,
-                            "max_tokens": min(payload.topK * 180, CHAT_MAX_TOKENS),
+                            "max_tokens": max_tokens,
                         },
                     )
 
@@ -3435,9 +3713,11 @@ async def project_qa(
                     continue
 
                 body = response.json()
-                message = body.get("choices", [{}])[0].get("message", {})
+                choice = (body.get("choices") or [{}])[0]
+                message = choice.get("message", {})
                 llm_answer = extract_openai_message_field(message, "content").strip()
                 reasoning_only = extract_openai_message_field(message, "reasoning_content").strip()
+                finish_reason = choice.get("finish_reason")
                 if not llm_answer:
                     detail = (
                         f"上游模型 {candidate_label} 仅返回思考过程、未返回正文"
@@ -3459,6 +3739,28 @@ async def project_qa(
                         )
                     )
                     continue
+
+                if should_retry_project_qa_completion(llm_answer, finish_reason):
+                    async with httpx.AsyncClient(timeout=UPSTREAM_CHAT_TIMEOUT_SECONDS) as client:
+                        continued_answer, continued_finish_reason = await continue_project_qa_completion(
+                            client=client,
+                            candidate_api_base=candidate_api_base,
+                            candidate_api_key=candidate_api_key,
+                            candidate_model_name=candidate_model_name,
+                            base_messages=base_messages,
+                            partial_answer=llm_answer,
+                            max_tokens=max(512, max_tokens // 2),
+                        )
+                    if continued_answer:
+                        llm_answer = f"{llm_answer.rstrip()}{continued_answer}"
+                        finish_reason = continued_finish_reason or finish_reason
+                        context["tool_trace"].append(
+                            ProjectQAToolTrace(
+                                tool="llm_synthesis",
+                                status="used",
+                                detail="上游回答首次触发长度截断，已自动补全续写一次",
+                            )
+                        )
 
                 answer = llm_answer
                 mode = "rag"
@@ -3504,6 +3806,13 @@ async def project_qa(
                 status="skipped",
                 detail=("当前没有足够的证据上下文可交给上游模型综合"),
             )
+        )
+
+    # Fallback: general questions with no LLM available
+    if context["is_general_question"] and not answer:
+        answer = (
+            "这个问题不在我的项目知识库范围内，且当前没有可用的语言模型来生成回答。"
+            "建议直接向老师说明你对这个问题的理解，或者换个与项目相关的问题来练习。"
         )
 
     critique = await selfcritique_answer(question, answer, context["evidence_blocks"])
@@ -3580,7 +3889,7 @@ async def project_qa_stream(
             answer_chunks: list[str] = []
 
             if payload.useLLM and (
-                context["sources"] or context["model_snapshot"] or context["live_detection_summary"]
+                context["sources"] or context["model_snapshot"] or context["live_detection_summary"] or context["is_general_question"]
             ):
                 for preset_index, model_preset in enumerate(context["ordered_model_presets"]):
                     candidate_api_key = model_preset.get("api_key") or resolve_api_key(
@@ -3588,7 +3897,7 @@ async def project_qa_stream(
                     )
                     candidate_api_base = model_preset.get("api_base") or os.getenv(
                         "OPENAI_BASE_URL",
-                        "https://api.hotaruapi.top/v1",
+                        "https://token-plan-cn.xiaomimimo.com/v1",
                     )
                     candidate_model_name = (
                         model_preset.get("model") or DEFAULT_CHAT_MODEL.strip() or None
@@ -3613,6 +3922,23 @@ async def project_qa_stream(
                     )
 
                     try:
+                        base_messages = build_project_qa_messages(
+                            question=question,
+                            evidence_blocks=context["evidence_blocks"],
+                            agent_mode=context["agent_mode"],
+                            answer_frame_title=context["answer_frame_title"],
+                            answer_frame_instruction=context["answer_frame_instruction"],
+                            answer_length_instruction=context["answer_length_instruction"],
+                            speaking_style_instruction=context["speaking_style_instruction"],
+                            speaker_profile=context["speaker_profile"],
+                            history_summary=context["history_summary"],
+                            model_snapshot=context["model_snapshot"],
+                            live_detection_summary=context["live_detection_summary"],
+                            tool_trace=context["tool_trace"],
+                            is_general_question=context["is_general_question"],
+                        )
+                        max_tokens = compute_project_qa_max_tokens(payload, candidate_model_name)
+                        final_finish_reason: str | None = None
                         async with httpx.AsyncClient(
                             timeout=UPSTREAM_CHAT_TIMEOUT_SECONDS
                         ) as client:
@@ -3622,28 +3948,9 @@ async def project_qa_stream(
                                 headers=build_upstream_chat_headers(candidate_api_key),
                                 json={
                                     "model": candidate_model_name,
-                                    "messages": build_project_qa_messages(
-                                        question=question,
-                                        evidence_blocks=context["evidence_blocks"],
-                                        agent_mode=context["agent_mode"],
-                                        answer_frame_title=context["answer_frame_title"],
-                                        answer_frame_instruction=context[
-                                            "answer_frame_instruction"
-                                        ],
-                                        answer_length_instruction=context[
-                                            "answer_length_instruction"
-                                        ],
-                                        speaking_style_instruction=context[
-                                            "speaking_style_instruction"
-                                        ],
-                                        speaker_profile=context["speaker_profile"],
-                                        history_summary=context["history_summary"],
-                                        model_snapshot=context["model_snapshot"],
-                                        live_detection_summary=context["live_detection_summary"],
-                                        tool_trace=context["tool_trace"],
-                                    ),
+                                    "messages": base_messages,
                                     "temperature": 0.2,
-                                    "max_tokens": min(payload.topK * 180, CHAT_MAX_TOKENS),
+                                    "max_tokens": max_tokens,
                                     "stream": True,
                                 },
                             ) as response:
@@ -3675,12 +3982,15 @@ async def project_qa_stream(
                                 content_type = (response.headers.get("content-type") or "").lower()
                                 if "application/json" in content_type:
                                     body = json.loads((await response.aread()).decode("utf-8"))
+                                    choice = (body.get("choices") or [{}])[0]
+                                    if isinstance(choice.get("finish_reason"), str):
+                                        final_finish_reason = choice["finish_reason"]
                                     reasoning_text = extract_openai_message_field(
-                                        body.get("choices", [{}])[0].get("message", {}),
+                                        choice.get("message", {}),
                                         "reasoning_content",
                                     ).strip()
                                     llm_answer = extract_openai_message_field(
-                                        body.get("choices", [{}])[0].get("message", {}),
+                                        choice.get("message", {}),
                                         "content",
                                     ).strip()
                                     if reasoning_text:
@@ -3715,6 +4025,8 @@ async def project_qa_stream(
                                         if not choices:
                                             continue
                                         delta = choices[0].get("delta") or {}
+                                        if isinstance(choices[0].get("finish_reason"), str):
+                                            final_finish_reason = choices[0]["finish_reason"]
                                         answer_delta, reasoning_delta = extract_openai_delta_text(
                                             delta
                                         )
@@ -3756,6 +4068,36 @@ async def project_qa_stream(
                             if candidate_emitted_deltas:
                                 yield encode_project_qa_stream_event("reset_deltas")
                             continue
+
+                        if should_retry_project_qa_completion(llm_answer, final_finish_reason):
+                            async with httpx.AsyncClient(timeout=UPSTREAM_CHAT_TIMEOUT_SECONDS) as client:
+                                continued_answer, _ = await continue_project_qa_completion(
+                                    client=client,
+                                    candidate_api_base=candidate_api_base,
+                                    candidate_api_key=candidate_api_key,
+                                    candidate_model_name=candidate_model_name,
+                                    base_messages=base_messages,
+                                    partial_answer=llm_answer,
+                                    max_tokens=max(512, max_tokens // 2),
+                                )
+                            if continued_answer:
+                                answer_chunks.append(continued_answer)
+                                llm_answer = f"{llm_answer.rstrip()}{continued_answer}"
+                                yield encode_project_qa_stream_event(
+                                    "status",
+                                    message=f"{candidate_label} 首次回答被截断，正在自动补全",
+                                )
+                                yield encode_project_qa_stream_event(
+                                    "answer_delta",
+                                    delta=continued_answer,
+                                )
+                                trace = ProjectQAToolTrace(
+                                    tool="llm_synthesis",
+                                    status="used",
+                                    detail="上游回答首次触发长度截断，已自动补全续写一次",
+                                )
+                                context["tool_trace"].append(trace)
+                                yield encode_project_qa_stream_event("trace", trace=trace.model_dump())
 
                         answer = llm_answer
                         mode = "rag"
@@ -3809,16 +4151,6 @@ async def project_qa_stream(
                 yield encode_project_qa_stream_event("status", message="正在整理仓库证据回答")
                 yield encode_project_qa_stream_event("answer_delta", delta=answer)
 
-            response_payload = build_project_qa_response(
-                payload=payload,
-                context=context,
-                answer=answer,
-                mode=mode,
-                model_name=model_name,
-                model_preset_id=model_preset_id,
-                model_label=model_label,
-                start_time=start_time,
-            )
             critique = await selfcritique_answer(question, answer, context["evidence_blocks"])
             if critique:
                 context["tool_trace"].append(
@@ -3838,6 +4170,16 @@ async def project_qa_stream(
             effective_sid = context.get("effective_session_id")
             if effective_sid and answer:
                 save_session_turn(effective_sid, "assistant", answer)
+            response_payload = build_project_qa_response(
+                payload=payload,
+                context=context,
+                answer=answer,
+                mode=mode,
+                model_name=model_name,
+                model_preset_id=model_preset_id,
+                model_label=model_label,
+                start_time=start_time,
+            )
             response_data = response_payload.model_dump(exclude_none=True)
             _qa_cache_put(payload, response_data)
             yield encode_project_qa_stream_event(
@@ -3869,7 +4211,7 @@ async def chat_completions(
     enforce_rate_limit(http_request, "chat", CHAT_RATE_LIMIT_PER_WINDOW)
 
     api_key = resolve_api_key(authorization)
-    api_base = os.getenv("OPENAI_BASE_URL", "https://api.hotaruapi.top/v1")
+    api_base = os.getenv("OPENAI_BASE_URL", "https://token-plan-cn.xiaomimimo.com/v1")
     model_name = (payload.model or DEFAULT_CHAT_MODEL).strip()
 
     if not api_key:

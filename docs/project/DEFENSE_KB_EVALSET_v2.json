@@ -1,0 +1,514 @@
+[
+  {
+    "id": "eval-001",
+    "question": "本项目的核心研究问题是什么？",
+    "category": "normal",
+    "expected_chapter_ids": ["A-1"],
+    "expected_keywords": ["AI生成文本检测", "核心研究问题", "人机混合写作"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-002",
+    "question": "为什么选择 BERT 而不是 GPT？",
+    "category": "normal",
+    "expected_chapter_ids": ["C-3"],
+    "expected_keywords": ["BERT", "编码器", "分类任务", "双向语义"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-003",
+    "question": "双层检测架构是什么？",
+    "category": "normal",
+    "expected_chapter_ids": ["D-2"],
+    "expected_keywords": ["双层架构", "文档级分类", "片段级边界检测"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-004",
+    "question": "[SEP] 边界标记为什么有效？",
+    "category": "normal",
+    "expected_chapter_ids": ["D-3"],
+    "expected_keywords": ["[SEP]", "边界标记", "片段拼接", "语义分隔"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-005",
+    "question": "三大创新点是什么？",
+    "category": "normal",
+    "expected_chapter_ids": ["B-1"],
+    "expected_keywords": ["创新点", "双层检测", "SEP标记", "温度校准"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-006",
+    "question": "V11c 相比 V10 提升来自哪里？",
+    "category": "normal",
+    "expected_chapter_ids": ["B-2", "E-3"],
+    "expected_keywords": ["V11c", "V10", "提升", "改进点"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-007",
+    "question": "训练集有多少条数据？",
+    "category": "normal",
+    "expected_chapter_ids": ["C-1"],
+    "expected_keywords": ["训练集", "数据规模", "条数"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-008",
+    "question": "核心指标有哪些？",
+    "category": "normal",
+    "expected_chapter_ids": ["E-1"],
+    "expected_keywords": ["准确率", "召回率", "F1", "AUC"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-009",
+    "question": "混淆矩阵说明了什么？",
+    "category": "normal",
+    "expected_chapter_ids": ["E-2"],
+    "expected_keywords": ["混淆矩阵", "TP", "FP", "FN", "TN"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-010",
+    "question": "Temperature Scaling 和 ECE 是什么？",
+    "category": "normal",
+    "expected_chapter_ids": ["D-4", "E-4"],
+    "expected_keywords": ["温度校准", "Temperature Scaling", "ECE", "置信度"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-011",
+    "question": "为什么以 2599 条作为主口径？",
+    "category": "normal",
+    "expected_chapter_ids": ["C-2"],
+    "expected_keywords": ["2599", "主口径", "数据筛选", "质量"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-012",
+    "question": "independent_data 为什么重要？",
+    "category": "normal",
+    "expected_chapter_ids": ["C-4", "E-5"],
+    "expected_keywords": ["independent_data", "独立测试集", "泛化", "数据泄露"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-013",
+    "question": "与基线方法对比结果如何？",
+    "category": "normal",
+    "expected_chapter_ids": ["E-3"],
+    "expected_keywords": ["基线", "FastText", "TextCNN", "对比"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-014",
+    "question": "当前主要局限性是什么？",
+    "category": "normal",
+    "expected_chapter_ids": ["H-1"],
+    "expected_keywords": ["局限性", "不足", "改进方向"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-015",
+    "question": "Data-Centric AI 思路怎么体现的？",
+    "category": "normal",
+    "expected_chapter_ids": ["C-5"],
+    "expected_keywords": ["Data-Centric", "数据质量", "数据治理"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-016",
+    "question": "你这模型多大？",
+    "category": "colloquial",
+    "expected_chapter_ids": ["D-1"],
+    "expected_keywords": ["模型大小", "参数量", "BERT"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-017",
+    "question": "训了多久啊？",
+    "category": "colloquial",
+    "expected_chapter_ids": ["D-5"],
+    "expected_keywords": ["训练时长", "epoch", "训练时间"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-018",
+    "question": "准确率多少？",
+    "category": "colloquial",
+    "expected_chapter_ids": ["E-1"],
+    "expected_keywords": ["准确率", "Accuracy"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-019",
+    "question": "你这项目有啥用？",
+    "category": "colloquial",
+    "expected_chapter_ids": ["A-2"],
+    "expected_keywords": ["应用场景", "实用价值", "学术诚信"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-020",
+    "question": "为啥不用大模型？",
+    "category": "colloquial",
+    "expected_chapter_ids": ["C-3"],
+    "expected_keywords": ["大模型", "资源", "轻量", "BERT"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-021",
+    "question": "数据哪来的？",
+    "category": "colloquial",
+    "expected_chapter_ids": ["C-1"],
+    "expected_keywords": ["数据来源", "数据集", "采集"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-022",
+    "question": "会不会过拟合啊？",
+    "category": "colloquial",
+    "expected_chapter_ids": ["D-6"],
+    "expected_keywords": ["过拟合", "正则化", "dropout", "早停"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-023",
+    "question": "跟别的工具比咋样？",
+    "category": "colloquial",
+    "expected_chapter_ids": ["E-3", "A-3"],
+    "expected_keywords": ["对比", "商用工具", "GPTZero", "性能"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-024",
+    "question": "你的训练数据规模和来源覆盖情况如何？",
+    "category": "paraphrase",
+    "expected_chapter_ids": ["C-1", "C-2"],
+    "expected_keywords": ["数据规模", "来源覆盖", "训练集"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-025",
+    "question": "模型在独立测试集上的泛化表现怎样？",
+    "category": "paraphrase",
+    "expected_chapter_ids": ["C-4", "E-5"],
+    "expected_keywords": ["独立测试集", "泛化", "independent_data"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-026",
+    "question": "请解释一下你的方法跟 FastText、TextCNN 等方案的差异",
+    "category": "paraphrase",
+    "expected_chapter_ids": ["E-3", "D-2"],
+    "expected_keywords": ["FastText", "TextCNN", "差异", "对比"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-027",
+    "question": "你的系统对人机混合写作的识别能力如何？",
+    "category": "paraphrase",
+    "expected_chapter_ids": ["D-2", "E-6"],
+    "expected_keywords": ["混合写作", "识别能力", "混合文本"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-028",
+    "question": "概率输出的可信度经过什么处理？",
+    "category": "paraphrase",
+    "expected_chapter_ids": ["D-4", "E-4"],
+    "expected_keywords": ["概率输出", "可信度", "温度校准", "ECE"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-029",
+    "question": "项目目前存在哪些不足和改进空间？",
+    "category": "paraphrase",
+    "expected_chapter_ids": ["H-1"],
+    "expected_keywords": ["不足", "改进空间", "局限性"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-030",
+    "question": "你的模型准确率和召回率分别是多少，跟基线比怎么样？",
+    "category": "combo",
+    "expected_chapter_ids": ["E-1", "E-3"],
+    "expected_keywords": ["准确率", "召回率", "基线对比"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-031",
+    "question": "你用了什么数据治理方法，效果如何体现？",
+    "category": "combo",
+    "expected_chapter_ids": ["C-5", "E-1"],
+    "expected_keywords": ["数据治理", "效果", "数据质量"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-032",
+    "question": "为什么选 BERT 而不是其他模型，你的创新点跟这个选择有什么关系？",
+    "category": "combo",
+    "expected_chapter_ids": ["C-3", "B-1"],
+    "expected_keywords": ["BERT", "模型选择", "创新点"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-033",
+    "question": "你的系统怎么处理混合文本，边界检测准确率多少？",
+    "category": "combo",
+    "expected_chapter_ids": ["D-2", "E-6"],
+    "expected_keywords": ["混合文本", "边界检测", "准确率"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-034",
+    "question": "温度校准做了什么，ECE 降低了多少，这对实际使用有什么意义？",
+    "category": "combo",
+    "expected_chapter_ids": ["D-4", "E-4"],
+    "expected_keywords": ["温度校准", "ECE", "实际意义", "置信度"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-035",
+    "question": "你这个东西到底靠不靠谱？",
+    "category": "fuzzy",
+    "expected_chapter_ids": ["E-1", "E-5"],
+    "expected_keywords": ["可靠性", "准确率", "泛化"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-036",
+    "question": "能不能检测所有 AI 写的东西？",
+    "category": "fuzzy",
+    "expected_chapter_ids": ["D-2", "E-6", "H-1"],
+    "expected_keywords": ["检测范围", "能力边界", "局限性"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-037",
+    "question": "你这个方法有没有什么硬伤？",
+    "category": "fuzzy",
+    "expected_chapter_ids": ["H-1"],
+    "expected_keywords": ["硬伤", "不足", "局限性"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-038",
+    "question": "数据和模型哪个更重要？",
+    "category": "fuzzy",
+    "expected_chapter_ids": ["C-5", "D-1"],
+    "expected_keywords": ["数据", "模型", "Data-Centric", "重要性"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-039",
+    "question": "那召回率呢？",
+    "category": "context",
+    "expected_chapter_ids": ["E-1"],
+    "expected_keywords": ["召回率", "Recall"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": [
+      {"role": "user", "content": "你的模型准确率是多少？"},
+      {"role": "assistant", "content": "模型在主测试集上准确率达到约95%，具体数值因版本和测试集不同有所差异。"}
+    ]
+  },
+  {
+    "id": "eval-040",
+    "question": "数据来源有哪些？",
+    "category": "context",
+    "expected_chapter_ids": ["C-1"],
+    "expected_keywords": ["数据来源", "数据集", "来源渠道"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": [
+      {"role": "user", "content": "训练集有多少条？"},
+      {"role": "assistant", "content": "主口径训练集共2599条数据，包含人工撰写和AI生成的文本样本。"}
+    ]
+  },
+  {
+    "id": "eval-041",
+    "question": "那 TextCNN 呢？",
+    "category": "context",
+    "expected_chapter_ids": ["E-3", "D-2"],
+    "expected_keywords": ["TextCNN", "对比", "基线"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": [
+      {"role": "user", "content": "跟 FastText 比怎么样？"},
+      {"role": "assistant", "content": "本项目方法在准确率和F1上均优于FastText基线，FastText作为词袋模型缺乏深层语义理解能力。"}
+    ]
+  },
+  {
+    "id": "eval-042",
+    "question": "那怎么改进？",
+    "category": "context",
+    "expected_chapter_ids": ["H-1", "H-2"],
+    "expected_keywords": ["改进", "未来方向", "优化"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": [
+      {"role": "user", "content": "有什么局限性？"},
+      {"role": "assistant", "content": "当前主要局限包括：对短文本检测效果有限、对新型AI模型生成文本的泛化能力有待提升、混合文本边界检测精度仍有提升空间。"}
+    ]
+  },
+  {
+    "id": "eval-043",
+    "question": "你的数据治理和模型校准分别是怎么做的，两者有什么关系？",
+    "category": "cross-section",
+    "expected_chapter_ids": ["C-5", "D-4"],
+    "expected_keywords": ["数据治理", "模型校准", "温度校准", "数据质量"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-044",
+    "question": "从数据构建到模型训练到评估，整个流程是怎样的？",
+    "category": "cross-section",
+    "expected_chapter_ids": ["C-1", "D-5", "E-1"],
+    "expected_keywords": ["数据构建", "模型训练", "评估", "流程"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-045",
+    "question": "你的创新点在实验结果上分别怎么验证的？",
+    "category": "cross-section",
+    "expected_chapter_ids": ["B-1", "D-2", "E-1"],
+    "expected_keywords": ["创新点", "实验验证", "消融实验"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-046",
+    "question": "系统的检测能力和部署效率如何兼顾？",
+    "category": "cross-section",
+    "expected_chapter_ids": ["D-2", "G-1"],
+    "expected_keywords": ["检测能力", "部署效率", "推理速度", "系统架构"],
+    "should_decline": false,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-047",
+    "question": "今天天气怎么样？",
+    "category": "out-of-scope",
+    "expected_chapter_ids": [],
+    "expected_keywords": [],
+    "should_decline": true,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-048",
+    "question": "帮我写一个 Python 快排算法",
+    "category": "out-of-scope",
+    "expected_chapter_ids": [],
+    "expected_keywords": [],
+    "should_decline": true,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-049",
+    "question": "你觉得 ChatGPT 好用吗？",
+    "category": "out-of-scope",
+    "expected_chapter_ids": [],
+    "expected_keywords": [],
+    "should_decline": true,
+    "should_admit_unknown": false,
+    "history_context": []
+  },
+  {
+    "id": "eval-050",
+    "question": "帮我看看这个 React 组件有没有 bug",
+    "category": "out-of-scope",
+    "expected_chapter_ids": [],
+    "expected_keywords": [],
+    "should_decline": true,
+    "should_admit_unknown": false,
+    "history_context": []
+  }
+]

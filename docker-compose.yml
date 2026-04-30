@@ -4,16 +4,22 @@ services:
       context: ./api
       dockerfile: Dockerfile
     volumes:
+      - ./:/workspace:ro
       - ./models:/app/models:ro
       - ./api/api.py:/app/api.py:ro
       - ./datasets/feedback_loop:/app/datasets/feedback_loop
       - ./datasets/project_qa_uploads:/app/datasets/project_qa_uploads
+      - ./datasets/project_qa_uploads:/workspace/datasets/project_qa_uploads
     env_file:
       - .env.deploy
     environment:
       - DETECTOR_CLASSIFIER_MODEL=models/bert_v11c_boundary_fix
       - DETECTOR_SPAN_MODEL=models/bert_span_detector
       - DETECTOR_FEEDBACK_DIR=/app/datasets/feedback_loop
+      - DC_DATASETS_DIR=/app/datasets
+      - DC_MODELS_DIR=/app/models
+      - DC_PROJECT_QA_UPLOAD_DIR=/app/datasets/project_qa_uploads
+      - PYTHONPATH=/workspace
     mem_limit: 1500m
     mem_reservation: 700m
     memswap_limit: 4g

@@ -50,6 +50,38 @@ python api/api.py
 
 用于 AI 续写和润色功能，转发到配置的代理 API。
 
+### 3. 人工确认闭环接口
+
+**POST** `/api/feedback`
+
+请求:
+```json
+{
+  "text": "待确认文本",
+  "predictedType": "human",
+  "confirmedCorrect": false,
+  "confirmedLabel": "ai",
+  "tags": ["casual", "false_negative"],
+  "note": "口语化AI被漏检"
+}
+```
+
+响应:
+```json
+{
+  "status": "ok",
+  "feedbackId": "uuid-like-id",
+  "misclassifiedSaved": true,
+  "storedAt": "2026-04-09T12:34:56"
+}
+```
+
+行为:
+- 仅“确认错误”的样本会写入 `datasets/feedback_loop/misclassified_samples.jsonl`
+- 已确认正确的样本不会进入闭环训练集
+- `misclassified_samples.jsonl` 会按文本内容去重，避免同一文本重复提交时被重复计入训练集
+- `misclassified_samples.jsonl` 可直接作为后续人工整理和增量训练的数据入口
+
 ## 关键依赖与配置
 
 ### Python 依赖
@@ -75,7 +107,8 @@ DETECTOR_TEMPERATURE=0.8165
 DETECTOR_DECISION_THRESHOLD=0.8
 DETECTOR_INCLUDE_RISK_OBSERVABILITY=0   # 1 to include risk fields in /api/detect response
 OPENAI_API_KEY=sk-xxx           # OpenAI兼容接口密钥
-OPENAI_BASE_URL=https://...     # 代理API地址
+OPENAI_BASE_URL=https://token-plan-cn.xiaomimimo.com/v1
+OPENAI_CHAT_MODEL=mimo-v2.5-pro
 ```
 
 ## 数据模型
@@ -100,6 +133,7 @@ class DetectionResponse(BaseModel):
     decisionThreshold: float | None
     riskFlags: list[str] | None  # 风险提示 (short_text/template_like 等)
     domainHint: str | None       # 粗粒度文本域提示
+    feedbackRequired: bool       # 前端/调用方需在检测后发起人工确认
 ```
 
 ### HybridTextDetector
@@ -146,6 +180,11 @@ api/
 ### 2026-02-13
 - 分类器默认路径更新为 `models/bert_v11c_boundary_fix`
 - Temperature 更新为 0.8165
+
+### 2026-04-09
+- 新增 `/api/feedback` 人工确认闭环接口
+- 检测响应新增 `feedbackRequired`
+- 新增 `datasets/feedback_loop/` 误判回流数据目录
 
 ### 2026-02-12
 - 分类器默认路径更新为 `models/bert_v10_augmented`

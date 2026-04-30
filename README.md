@@ -28,7 +28,8 @@
 
 ## 🤗 Hugging Face模型
 
-- 🔥 [BERT分类器（基线发布）](https://huggingface.co/AnxForever/chinese-ai-detector-bert) - 98.71%准确率
+- 🔥 [BERT分类器（基线发布）](https://huggingface.co/AnxForever/chinese-ai-detector-bert) - 98.71%准确率（基线 V2，HF 托管）
+- 🏆 当前生产模型：`models/bert_v11c_boundary_fix`（验证集 98.75% / 独立评估 98.57% / 三集均值 **98.56%**）
 - 🎯 [边界检测器](https://huggingface.co/AnxForever/chinese-ai-detector-span) - Token级定位
 - 📊 [训练数据集](https://huggingface.co/datasets/AnxForever/chinese-ai-detection-dataset) - 66K样本（基线）
 
@@ -70,7 +71,7 @@ datacollection/
 │   ├── data_cleaning/
 │   └── demo/
 ├── models/                    # 多代模型（推荐: bert_v10_augmented）
-├── datasets/                  # active/eval/mixed/raw/analysis
+├── datasets/                  # active/eval/mixed/raw/analysis/feedback_loop
 ├── docs/                      # 项目文档与计划
 │   ├── project/
 │   └── plans/

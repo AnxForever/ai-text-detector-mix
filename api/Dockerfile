@@ -2,11 +2,6 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# System deps for torch
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgomp1 \
-    && rm -rf /var/lib/apt/lists/*
-
 COPY requirements_api.txt .
 RUN pip install --no-cache-dir \
     -i https://mirrors.aliyun.com/pypi/simple/ \

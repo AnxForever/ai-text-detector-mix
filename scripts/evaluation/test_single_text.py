@@ -20,6 +20,8 @@ import warnings
 import torch
 from transformers import BertForSequenceClassification, BertTokenizer
 
+from scripts.utils.feedback_loop import persist_feedback
+
 warnings.filterwarnings('ignore', category=FutureWarning, module='transformers')
 
 # 设置UTF-8编码
@@ -156,6 +158,51 @@ def format_result(text, prediction, confidence, probabilities, ai_threshold=0.8)
     print("="*70)
 
 
+def prediction_to_label(prediction):
+    """Convert numeric prediction to canonical feedback label."""
+    label_map = {0: "human", 1: "ai", -1: "mixed"}
+    return label_map[prediction]
+
+
+def prompt_feedback(text, prediction, confidence, probabilities):
+    """Collect manual confirmation and store corrections when needed."""
+    while True:
+        confirmed = input("\n结果是否正确？[y/n，回车默认 y]: ").strip().lower()
+        if confirmed in {"", "y", "yes"}:
+            print("✓ 已确认结果正确；该样本不会进入闭环训练集")
+            return
+        if confirmed in {"n", "no"}:
+            break
+        print("⚠️ 请输入 y 或 n")
+
+    while True:
+        confirmed_label = input("真实标签是什么？[human/ai/mixed]: ").strip().lower()
+        if confirmed_label in {"human", "ai", "mixed"}:
+            break
+        print("⚠️ 标签仅支持 human / ai / mixed")
+
+    raw_tags = input("请输入 tags（逗号分隔，可留空）: ").strip()
+    note = input("备注（可留空）: ").strip()
+    tags = [tag.strip() for tag in raw_tags.split(",")] if raw_tags else []
+
+    stored = persist_feedback(
+        text=text,
+        predicted_label=prediction_to_label(prediction),
+        confirmed_correct=False,
+        confirmed_label=confirmed_label,
+        tags=tags,
+        note=note or None,
+        source="interactive_cli",
+        confidence=confidence * 100,
+        ai_percentage=int(float(probabilities[1]) * 100),
+        human_percentage=int(float(probabilities[0]) * 100),
+    )
+    if stored["misclassified_saved"]:
+        print(f"✓ 误判样本已写入闭环数据集: {stored['corrections_path']}")
+    else:
+        print("✓ 该误判样本已存在，已跳过去重")
+
+
 def interactive_mode(model, tokenizer, device, ai_threshold):
     """交互模式：持续输入文本进行检测"""
     print("\n" + "="*70)
@@ -198,6 +245,7 @@ def interactive_mode(model, tokenizer, device, ai_threshold):
 
         # 显示结果
         format_result(text, prediction, confidence, probabilities, ai_threshold)
+        prompt_feedback(text, prediction, confidence, probabilities)
 
 
 def batch_test_mode(texts, model, tokenizer, device, ai_threshold):
@@ -223,6 +271,7 @@ def batch_test_mode(texts, model, tokenizer, device, ai_threshold):
         })
 
         format_result(text, prediction, confidence, probabilities, ai_threshold)
+        prompt_feedback(text, prediction, confidence, probabilities)
 
     # 汇总统计
     print("\n" + "="*70)
@@ -293,6 +342,7 @@ def main():
             args.text, model, tokenizer, args.device, args.ai_threshold
         )
         format_result(args.text, prediction, confidence, probabilities, args.ai_threshold)
+        prompt_feedback(args.text, prediction, confidence, probabilities)
 
     elif args.file:
         # 文件批量模式

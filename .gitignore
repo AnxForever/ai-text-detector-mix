@@ -87,3 +87,21 @@ frontend/
 
 # 部署配置（含敏感信息）
 .env.deploy
+
+# IDE / agent / coverage 工具产物（不进 git）
+.codex
+.coverage
+.kiro/
+.mcp.json
+.tools/
+
+# 大模型权重 — INT8 量化版与实验中间版本（不进 git，过大且可重训）
+models/bert_*_int8/
+models/bert_v11c_hard_reweight*/
+
+# 论文构建产物与中间文件
+docs/thesis/build/
+docs/thesis/pandoc/
+docs/thesis/gpt_context_pack_*/
+docs/thesis/*.html
+docs/thesis/*.docx

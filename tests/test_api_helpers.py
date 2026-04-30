@@ -160,12 +160,12 @@ class TestBuildReasonAnalysis:
             risk_flags=[],
         )
         assert "AI 生成" in summary
-        assert any("AI倾向明显高于人类倾向" in signal for signal in signals)
-        assert any("未发现明确的混合边界" in signal for signal in signals)
+        assert any("AI 特征占优" in signal for signal in signals)
+        assert any("未发现明确的风格切换边界" in signal for signal in signals)
 
-    def test_mixed_summary_mentions_boundary(self):
+    def test_ai_summary_mentions_boundary_when_present(self):
         summary, signals = build_reason_analysis(
-            result_type="mixed",
+            result_type="ai",
             confidence=72,
             ai_percentage=58,
             human_percentage=42,
@@ -173,8 +173,7 @@ class TestBuildReasonAnalysis:
             domain_hint="technical",
             risk_flags=["low_confidence"],
         )
-        assert "混合文本" in summary
-        assert "第 3 句附近" in summary
+        assert "AI 生成" in summary
         assert any("风格切换" in signal for signal in signals)
         assert any("技术术语" in signal for signal in signals)
         assert any("低置信区间" in signal for signal in signals)

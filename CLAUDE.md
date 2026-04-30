@@ -1,243 +1,159 @@
-# datacollection - AI生成文本检测数据集收集与模型训练项目
+# CLAUDE.md
 
-> 变更记录见文档末尾
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 项目愿景
+## Project Overview
 
-构建一个针对中文混合文本（人类+AI）的检测系统，实现从粗粒度分类到细粒度边界定位的完整解决方案。核心创新在于使用 `[SEP]` 边界标记机制显著提升混合文本检测能力。
+Chinese AI-generated text detection system: sentence-level classification (human vs AI) + token-level boundary localization for mixed texts. Core innovation: `[SEP]` boundary marker mechanism between human-written and AI-generated segments significantly improves mixed-text detection.
 
-## 架构总览
+**Tech stack**: Python 3.12, PyTorch 2.0+, Transformers 4.30+, FastAPI, BERT-base-chinese (fine-tuned)
+**Frontend**: Next.js 16 + React 19 + TailwindCSS 4 (in `frontend/`, independent submodule)
 
-```
-                                    ┌──────────────────────────────────────────┐
-                                    │              用户输入文本                │
-                                    └─────────────────────┬────────────────────┘
-                                                          │
-                                                          ▼
-┌──────────────────────────────────────────────────────────────────────────────────────────────┐
-│                                      检测服务层 (api/)                                        │
-│  ┌─────────────────────────────────────────────────────────────────────────────────────────┐ │
-│  │   FastAPI 服务 (api/api.py)                                                              │ │
-│  │   - POST /api/detect - 文本检测                                                          │ │
-│  │   - POST /v1/chat/completions - OpenAI兼容接口                                           │ │
-│  └─────────────────────────────────────────────────────────────────────────────────────────┘ │
-└────────────────────────────────────────────────┬─────────────────────────────────────────────┘
-                                                 │
-                     ┌───────────────────────────┴───────────────────────────┐
-                     ▼                                                       ▼
-         ┌───────────────────────┐                              ┌───────────────────────┐
-         │  分类器 (Classifier)  │                              │   边界检测器 (Span)   │
-         │  bert_v11c_boundary  │                              │  bert_span_detector   │
-         │  三集平均: 98.56%     │                              │  Token准确率: 96.69%  │
-         └───────────────────────┘                              └───────────────────────┘
-```
-
-### 技术栈
-
-- **语言**: Python 3.12
-- **深度学习**: PyTorch 2.0+, Transformers 4.30+
-- **前端**: Next.js 16 + React 19 + TailwindCSS 4 (独立子模块)
-- **API**: FastAPI + Uvicorn
-- **模型**: BERT-base-chinese (微调)
-
-## 模块结构图
-
-```mermaid
-graph TD
-    A["(根) datacollection"] --> B["api"]
-    A --> C["scripts"]
-    A --> D["models"]
-    A --> E["datasets"]
-    A --> F["docs"]
-    A --> G["config"]
-    A --> H["configs"]
-    A --> I["frontend"]
-    A --> J["archive"]
-
-    C --> C1["training"]
-    C --> C2["evaluation"]
-    C --> C3["generation"]
-    C --> C4["data_cleaning"]
-    C --> C5["demo"]
-    C --> C6["utils"]
-
-    D --> D1["bert_v11c_boundary_fix"]
-    D --> D2["bert_span_detector"]
-    D --> D3["bert_v10_augmented"]
-
-    E --> E1["active"]
-    E --> E2["mixed"]
-    E --> E3["eval"]
-    E --> E4["raw"]
-    E --> E5["analysis"]
-
-    F --> F1["project"]
-    F --> F2["plans"]
-    F --> F3["archive"]
-
-    click B "./api/CLAUDE.md" "API服务模块"
-    click C "./scripts/CLAUDE.md" "脚本模块"
-    click D "./models/CLAUDE.md" "模型模块"
-    click E "./datasets/CLAUDE.md" "数据集模块"
-    click F "./docs/CLAUDE.md" "文档模块"
-    click G "./config/README.md" "API配置说明"
-    click H "./configs/README.md" "生成任务配置"
-    click I "./frontend/CLAUDE.md" "毕设演示前端"
-```
-
-## 模块索引
-
-| 模块路径 | 职责描述 | 主要入口 | 状态 |
-|---------|---------|---------|------|
-| `api/` | FastAPI后端服务，提供文本检测API | `api/api.py` | 活跃 |
-| `scripts/training/` | 模型训练脚本集 | `train_bert_improved.py` | 活跃 |
-| `scripts/evaluation/` | 模型评估与测试脚本 | `eval_complete.py` | 活跃 |
-| `scripts/generation/` | AI文本生成脚本 | `scenario_fill_generate.py` | 活跃 |
-| `scripts/data_cleaning/` | 数据清洗与处理脚本 | `add_sep_markers.py` | 活跃 |
-| `scripts/demo/` | 可视化演示 | `visualize_detection.py` | 活跃 |
-| `models/` | 训练好的模型文件 | - | 只读 |
-| `datasets/` | 数据集存储 | `registry.json` | 活跃 |
-| `docs/` | 项目文档 | `README.md` | 活跃 |
-| `config/` | API配置 | `api.local.json` | 配置 |
-| `configs/` | 生成任务配置 | `scenario_fill_*.json` | 配置 |
-| `frontend/` | Next.js 毕设演示前端 | `pnpm dev` | 活跃 |
-| `archive/` | 归档文件 | - | 归档 |
-
-## 运行与开发
-
-### 环境设置
+## Common Commands
 
 ```bash
-# 激活虚拟环境
-source .venv/bin/activate  # Linux/macOS
-# 或
-.venv\Scripts\activate     # Windows
+# Activate virtualenv (required for all Python commands)
+source .venv/bin/activate
 
-# 安装依赖
-pip install -r requirements_training.txt
-```
+# --- Testing ---
+pytest                                    # Run all tests (testpaths: tests/, api/tests/)
+pytest api/tests/                         # API tests only
+pytest -k "test_function_name"            # Single test
+pytest --cov --cov-report=term-missing    # With coverage (fail_under=50)
 
-### 常用命令
+# --- Linting & Type Checking ---
+ruff check .                              # Lint (E/W/F/I/UP/T20 rules, line-length=100)
+ruff check --fix .                        # Auto-fix lint issues
+ruff format .                             # Format code
+mypy api/ scripts/                        # Type check (py312, ignore_missing_imports=true)
 
-```bash
-# 运行可视化演示
-python scripts/demo/visualize_detection.py
-
-# 完整评估
-python scripts/evaluation/eval_complete.py
-
-# 训练BERT分类器
+# --- Training ---
 python scripts/training/train_bert_improved.py --epochs 5 --batch_size 16
-
-# 训练边界检测器
 python scripts/training/train_span_detector.py --epochs 10
 
-# 启动API服务
-cd api && python api.py  # 监听 0.0.0.0:8000
+# --- Evaluation ---
+python scripts/evaluation/eval_complete.py              # Full test set evaluation
+python scripts/evaluation/test_single_text.py --interactive  # Interactive single-text test
+python scripts/evaluation/comprehensive_eval.py         # Comprehensive evaluation
+
+# --- API Server ---
+cd api && python api.py                   # Starts on 0.0.0.0:8000
+
+# --- Frontend ---
+cd frontend && pnpm dev                   # Dev server
+cd frontend && pnpm build                 # Production build
+cd frontend && pnpm lint                  # ESLint
+
+# --- Docker Deployment ---
+docker compose up -d                      # Full stack: backend + frontend + nginx (port 80)
 ```
 
-### 环境变量
+## Architecture
 
-```bash
-export HF_HUB_OFFLINE=1           # 离线模式
-export TRANSFORMERS_OFFLINE=1     # 禁用下载
-export PYTHONIOENCODING=utf-8     # 中文编码
+### Two-Model Pipeline
+
+```
+Input Text → Classifier (bert_v11c_boundary_fix) → {Human, AI, Mixed}
+                                                        ↓ (if Mixed)
+                                              Span Detector (bert_span_detector)
+                                                        ↓
+                                              Token-level boundary labels
 ```
 
-## 测试策略
+- **Classifier**: `BertForSequenceClassification` — 3-class (human/AI/mixed), 98.56% accuracy
+- **Span Detector**: `BertForTokenClassification` — token-level 0/1 labels, 96.69% accuracy
+- **Temperature Scaling**: T=0.8165, ECE=0.0034 for calibrated confidence scores
 
-### 评估脚本
+### API Endpoints (api/api.py)
 
-| 脚本 | 用途 |
-|-----|------|
-| `scripts/evaluation/eval_complete.py` | 完整测试集评估 |
-| `scripts/evaluation/test_single_text.py --interactive` | 交互式单文本测试 |
-| `scripts/evaluation/comprehensive_eval.py` | 综合评估 |
-| `api/tests/test_v0_api.py` | API配置检查 |
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/detect` | Main detection: returns label + confidence + boundary spans |
+| `POST /v1/chat/completions` | OpenAI-compatible wrapper for integration |
+| `GET /api/health` | Health check |
 
-### 模型性能指标
+API env vars: `DETECTOR_CLASSIFIER_MODEL`, `DETECTOR_SPAN_MODEL`, `DETECTOR_MAX_LENGTH=256`, `DETECTOR_TEMPERATURE=0.8165`, `DETECTOR_DECISION_THRESHOLD=0.8`
 
-| 指标 | 数值 |
-|-----|------|
-| V11c 验证准确率 | 98.75% |
-| V11c 三集平均准确率 | 98.56% |
-| V11c 独立评估集 | 98.57% |
-| Token分类 | 96.69% |
+### Training Pipeline
 
-## 编码规范
+1. **Data cleaning** (`scripts/data_cleaning/`): `add_sep_markers.py` inserts `[SEP]` at human↔AI boundaries; `prepare_span_labels.py` generates token-level labels
+2. **Dataset prep**: `scripts/bert_prep/create_bert_dataset.py` → `AIDetectionDataset` + `dynamic_collate_fn`
+3. **Training** (`scripts/training/train_bert_improved.py`): `BERTTrainer` class with warmup, label_smoothing=0.05, length-weighted loss
+4. **Evaluation** (`scripts/evaluation/`): ID/OOD/Mixed split evaluation via `datasets/eval/splits/v1/`
 
-### 代码风格
+### Key Data Format
 
-- **最大行长**: 100字符
-- **缩进**: 4空格
-- **导入顺序**: 标准库 > 第三方库 > 本地模块
-- **命名规范**:
-  - 变量/函数: `snake_case`
-  - 类: `PascalCase`
-  - 常量: `UPPER_SNAKE_CASE`
+CSV files with columns: `text`, `label` (0=Human, 1=AI), `category`, `source`
+Mixed text categories: C2 (human intro + AI continuation), C3 (AI rewrite), C4 (AI polishing)
 
-### 类型提示
+## Module Responsibilities
 
-```python
-def train_model(
-    model: torch.nn.Module,
-    train_loader: DataLoader,
-    epochs: int,
-    learning_rate: float = 2e-5
-) -> Dict[str, float]:
-    """训练模型并返回指标."""
-    pass
-```
+Each module with a `CLAUDE.md` contains detailed guidance for that subsystem.
 
-### 设备处理
+| Path | Role | Entry Point | Module Docs |
+|------|------|-------------|-------------|
+| `api/` | FastAPI detection service | `api.py` | [api/CLAUDE.md](api/CLAUDE.md) |
+| `scripts/` | Training, evaluation, generation, cleaning | — | [scripts/CLAUDE.md](scripts/CLAUDE.md) |
+| `datasets/` | All data; registry at `registry.json` | `registry.json` | [datasets/CLAUDE.md](datasets/CLAUDE.md) |
+| `models/` | Trained model checkpoints (read-only) | — | [models/CLAUDE.md](models/CLAUDE.md) |
+| `docs/` | Project documentation & plans | — | [docs/CLAUDE.md](docs/CLAUDE.md) |
+| `frontend/` | Next.js demo UI | `pnpm dev` | [frontend/CLAUDE.md](frontend/CLAUDE.md) |
+| `config/` | API runtime config (contains secrets) | `api.local.json` | — |
+| `configs/` | Generation task templates | `scenario_fill_*.json` | — |
 
-```python
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model = model.to(device)
-```
+## Key Models
 
-## AI 使用指引
+| Model | Type | Metric |
+|-------|------|--------|
+| `models/bert_v11c_boundary_fix/` | Classifier | 98.56% (3-set avg), 98.57% (independent eval) |
+| `models/bert_span_detector/` | Token classifier | 96.69% token accuracy |
 
-### 推荐操作
+V11c training config: batch_size=8, accum_steps=4, max_length=256, epochs=4, lr=1e-05, label_smoothing=0.05
 
-1. **阅读现有文档**: 优先查看 `docs/project/DEFENSE_CURRENT_STATUS.md` 了解最新口径
-2. **数据集操作**: 参考 `datasets/registry.json` 获取数据集列表
-3. **模型使用**: 加载 `models/bert_v11c_boundary_fix` 进行推理
-4. **添加评估**: 在 `scripts/evaluation/` 下创建新脚本
+## Critical Rules
 
-### 禁止操作
+- **Never delete** `models/` — contains trained weights (781MB)
+- **Never modify** `datasets/active/core_v1/` — primary training set
+- **Secrets**: `config/api.local.json` and `.env.deploy` contain API keys — never commit
+- **Offline mode**: Set `HF_HUB_OFFLINE=1` and `TRANSFORMERS_OFFLINE=1` to prevent model downloads
+- **Latest status doc**: `docs/project/DEFENSE_CURRENT_STATUS.md`
+- **Dataset discovery**: Use `datasets/registry.json` (18 entries with metadata)
 
-1. **不要删除模型**: `models/` 目录包含训练好的模型 (781MB)
-2. **不要修改核心训练数据**: `datasets/active/core_v1/` 是主训练集
-3. **注意API密钥**: `config/api.local.json` 包含敏感信息
+## Dependencies
 
-### 关键文件
+| File | Purpose |
+|------|---------|
+| `requirements_training.txt` | Training: torch, transformers, pandas, scikit-learn, openai |
+| `api/requirements_api.txt` | API only: fastapi, uvicorn, torch, transformers |
+| `requirements_dev.txt` | Dev: pytest, pytest-cov, ruff, mypy, httpx |
 
-- `models/bert_v11c_boundary_fix/` - 主分类器 (三集平均 98.56%)
-- `models/bert_span_detector/` - 边界检测器
-- `datasets/merged_v2/` - 训练主数据池
+## Code Style
 
-## 变更记录 (Changelog)
+- Line length: 100 chars (ruff enforced)
+- Python 3.12, type hints encouraged
+- Import order: stdlib > third-party > local (`scripts`, `api` are first-party)
+- `T20` rule active: `print()` statements flagged by ruff — use logging instead
+- Config in `pyproject.toml` (pytest, ruff, mypy, coverage — single source of truth)
 
-### 2026-02-13
+## Recommended Skills
 
-- 推荐模型更新为 `bert_v11c_boundary_fix` (三集平均 98.56%, 独立评估 98.57%)
-- V11c 风险治理路线: 数据清洗 + 弱域增补 + 长文AI边界修复
-- Temperature Scaling: T=0.8165, ECE=0.0034
+Use these slash commands for this project:
 
-### 2026-02-12
+| Skill | When |
+|-------|------|
+| `/python-patterns` | Writing or reviewing Python code |
+| `/python-testing` | Writing tests, TDD workflow |
+| `/security-review` | Before commits touching API/auth/secrets |
+| `/verification-loop` | Pre-commit validation (lint + test + build) |
 
-- 推荐模型更新为 `bert_v10_augmented`，同步最新性能口径
-- 文档入口更新为 `docs/project/DEFENSE_CURRENT_STATUS.md`
-- 调整关键文件索引与架构示意
+## Hooks (Auto-configured)
 
-### 2026-01-28
-- 初始化项目架构文档 (CLAUDE.md)
-- 创建模块结构图和索引
-- 添加 `config/README.md` 配置说明文档
-- 添加 `configs/README.md` 生成任务配置说明
-- 添加 `frontend/CLAUDE.md` 毕设演示前端文档
+PostToolUse hooks fire on every `Edit`/`Write` of `.py` files:
 
----
+| Hook | What it does |
+|------|-------------|
+| `ruff-fix.sh` | Auto-formats and fixes lint issues |
+| `print-detect.sh` | Warns about `print()` statements (T20) |
+| `pytest-run.sh` | Runs related tests (test files or api/ changes) |
 
-*文档更新时间: 2026-02-13*
+Hook scripts live in `.claude/hooks/`, configured in `.claude/settings.local.json`.

@@ -91,7 +91,7 @@ def test_infer_mode_llm_failure_falls_back(monkeypatch):
     result = asyncio.get_event_loop().run_until_complete(
         infer_project_agent_mode("帮我看看数据治理到底做了什么", None)
     )
-    assert result == "defense"
+    assert result == "technical"
 
 
 # ---------------------------------------------------------------------------
@@ -124,6 +124,19 @@ def test_session_missing_file():
     from api.api import load_session_history
 
     assert load_session_history("nonexistent-session") == []
+
+
+def test_session_storage_failure_is_best_effort(tmp_path: Path, monkeypatch):
+    from api.api import load_session_history, save_session_turn
+
+    blocked_path = tmp_path / "not-a-directory"
+    blocked_path.write_text("occupied", encoding="utf-8")
+    monkeypatch.setattr("api.api.SESSION_DIR", blocked_path)
+    monkeypatch.setattr("api.api._SESSION_STORAGE_WARNING_EMITTED", False)
+
+    save_session_turn("readonly-session-001", "user", "这次保存失败也不能影响问答")
+
+    assert load_session_history("readonly-session-001") == []
 
 
 def test_merge_session_no_sid():
@@ -170,6 +183,33 @@ def test_cache_key_differs_for_different_questions():
     assert _qa_cache_key(p1) != _qa_cache_key(p2)
 
 
+def test_cache_key_includes_agent_context_fields():
+    from api.api import ProjectQARequest, _qa_cache_key
+
+    base = ProjectQARequest(question="同一个问题测试", useLLM=False)
+    with_analysis = ProjectQARequest(
+        question="同一个问题测试",
+        useLLM=False,
+        analysisText="待检测文本 A",
+    )
+    with_history = ProjectQARequest(
+        question="同一个问题测试",
+        useLLM=False,
+        history=[{"role": "user", "content": "前一个问题"}],
+    )
+    with_profile = ProjectQARequest(
+        question="同一个问题测试",
+        useLLM=False,
+        speakerProfile="不同答辩身份",
+    )
+    with_llm = ProjectQARequest(question="同一个问题测试", useLLM=True)
+
+    assert _qa_cache_key(base) != _qa_cache_key(with_analysis)
+    assert _qa_cache_key(base) != _qa_cache_key(with_history)
+    assert _qa_cache_key(base) != _qa_cache_key(with_profile)
+    assert _qa_cache_key(base) != _qa_cache_key(with_llm)
+
+
 def test_cache_put_and_get(monkeypatch):
     from api.api import ProjectQARequest, _qa_cache_get, _qa_cache_put
 
@@ -204,3 +244,52 @@ def test_cache_eviction(monkeypatch):
         _qa_cache_put(ProjectQARequest(question=f"问题编号{i:03d}"), {"answer": f"a{i}"})
 
     assert len(_qa_cache) <= 3
+
+
+def test_file_view_allows_nested_configured_dirs(tmp_path: Path, monkeypatch):
+    from api.api import _resolve_safe_project_file
+
+    frontend_file = tmp_path / "frontend" / "app" / "advisor" / "page.tsx"
+    model_file = tmp_path / "models" / "bert_v11c_boundary_fix" / "eval_comparison.json"
+    private_file = tmp_path / "private" / "secret.json"
+
+    frontend_file.parent.mkdir(parents=True)
+    model_file.parent.mkdir(parents=True)
+    private_file.parent.mkdir(parents=True)
+    frontend_file.write_text("export default function Page() { return null }\n", encoding="utf-8")
+    model_file.write_text("{}", encoding="utf-8")
+    private_file.write_text("{}", encoding="utf-8")
+
+    monkeypatch.setattr("api.api.PROJECT_ROOT", tmp_path)
+
+    assert _resolve_safe_project_file("frontend/app/advisor/page.tsx") == frontend_file.resolve()
+    assert _resolve_safe_project_file("models/bert_v11c_boundary_fix/eval_comparison.json")
+    assert _resolve_safe_project_file("private/secret.json") is None
+
+
+def test_project_local_answer_generic_question_does_not_recurse():
+    from api.api import build_project_local_answer
+
+    answer = build_project_local_answer(
+        "普通问法：这个项目有什么价值？",
+        agent_mode="defense",
+        answer_frame_title="标准说明口径",
+        hits=[],
+        model_snapshot=None,
+    )
+
+    assert "检索" in answer or "仓库" in answer
+
+
+def test_project_qa_retry_detects_dangling_enumeration():
+    from api.api import should_retry_project_qa_completion
+
+    answer = (
+        "老师好，我的毕业设计在中文AI文本检测任务上，最终模型在独立评估集上达到了"
+        "98.57%的准确率，同时校准误差（ECE）仅为0.0034，这说明模型不仅预测准确，"
+        "而且输出的置信度非常可靠。下面我从数据、算法、"
+    )
+
+    assert should_retry_project_qa_completion(answer, None)
+    assert should_retry_project_qa_completion(answer, "length")
+    assert not should_retry_project_qa_completion(answer + "工程三个方面展开。", None)

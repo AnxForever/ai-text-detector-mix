@@ -33,6 +33,17 @@ def make_request(headers: dict[str, str] | None = None) -> Request:
     return Request(scope)
 
 
+async def collect_streaming_body(response) -> str:
+    """Read a StreamingResponse body into a single UTF-8 string."""
+    chunks: list[str] = []
+    async for chunk in response.body_iterator:
+        if isinstance(chunk, bytes):
+            chunks.append(chunk.decode("utf-8"))
+        else:
+            chunks.append(chunk)
+    return "".join(chunks)
+
+
 @pytest.fixture()
 def mock_detector():
     """Create a mock HybridTextDetector with sensible defaults."""
@@ -108,7 +119,7 @@ class TestDetectEndpoint:
         assert response.feedbackRequired is True
         assert response.reasonSummary is not None
         assert response.reasonSignals
-        assert any("AI倾向" in signal for signal in response.reasonSignals)
+        assert any("AI 特征" in signal for signal in response.reasonSignals)
 
     def test_detect_human_text(self, api_context):
         mock_det = api_context
@@ -156,7 +167,7 @@ class TestDetectEndpoint:
 
         assert len(response.sentences) == 3
 
-    def test_detect_mixed_with_boundary(self, api_context, monkeypatch):
+    def test_detect_binary_result_with_boundary_hint(self, api_context, monkeypatch):
         mock_det = api_context
         mock_det.classify.return_value = {
             "label": "AI",
@@ -177,9 +188,9 @@ class TestDetectEndpoint:
             make_request(),
         )
 
-        assert response.type == "mixed"
+        assert response.type == "ai"
         assert response.boundary is not None
-        assert "混合文本" in response.reasonSummary
+        assert "AI 生成" in response.reasonSummary
         assert any("风格切换" in signal for signal in response.reasonSignals)
 
     def test_detect_uses_exact_feedback_override(self, api_context, monkeypatch):
@@ -439,6 +450,7 @@ class TestProjectQAEndpoint:
         assert response.sources[0].path == "docs/project/DEFENSE_CURRENT_STATUS.md"
         assert any(item.tool == "repository_search" for item in response.toolTrace)
         assert response.suggestedQuestions
+        assert all("导师" not in item and "怎么说" not in item for item in response.suggestedQuestions)
 
     def test_project_qa_uses_llm_when_available(self, api_context, monkeypatch):
         fake_hits = [
@@ -506,7 +518,7 @@ class TestProjectQAEndpoint:
         assert response.mode == "rag"
         assert response.model == "mock-rag-model"
         assert response.answer == "这是基于仓库证据生成的答辩回答。"
-        assert response.answerFrame == "标准答辩口径"
+        assert response.answerFrame == "标准说明口径"
         assert response.answerLength == "brief"
         assert response.speakingStyle == "confident"
         assert response.effectiveSpeakerProfile == "我是计算机专业本科生，正在做毕设答辩。"
@@ -557,6 +569,165 @@ class TestProjectQAEndpoint:
         assert response.memorySummary is not None
         assert any(item.tool == "conversation_memory" for item in response.toolTrace)
         assert any(item.tool == "live_detector" and item.status == "used" for item in response.toolTrace)
+
+    def test_project_qa_returns_code_references_for_inline_symbols(self, api_context, monkeypatch):
+        fake_hits = [
+            SimpleNamespace(
+                chunk=SimpleNamespace(path="docs/project/DEFENSE_CURRENT_STATUS.md", content="符号引用上下文"),
+                score=0.91,
+                excerpt="符号引用上下文",
+            )
+        ]
+        fake_symbol = SimpleNamespace(
+            symbol="build_project_qa_messages",
+            path="api/api.py",
+            signature="build_project_qa_messages(question, evidence_blocks)",
+            snippet="def build_project_qa_messages(question, evidence_blocks):\n    return []",
+        )
+        fake_index = SimpleNamespace(
+            search=lambda question, top_k: fake_hits,
+            source_count=18,
+            chunks=[],
+            resolve_code_symbol=lambda term: fake_symbol if term == "build_project_qa_messages" else None,
+        )
+
+        monkeypatch.setattr(api_module, "get_project_knowledge_index", lambda force_refresh=False: fake_index)
+        monkeypatch.setattr(
+            api_module,
+            "build_extractive_answer",
+            lambda question, hits: "关键流程由 `build_project_qa_messages` 组装提示消息。",
+        )
+
+        response = asyncio.run(
+            api_module.project_qa(
+                api_module.ProjectQARequest(question="提示消息如何组装", useLLM=False),
+                make_request(),
+                authorization=None,
+                x_internal_token=None,
+            )
+        )
+
+        assert response.codeReferences
+        assert response.codeReferences[0].symbol == "build_project_qa_messages"
+        assert response.codeReferences[0].path == "api/api.py"
+
+    def test_project_qa_returns_evidence_references_for_citation_labels(self, api_context, monkeypatch):
+        fake_hits = [
+            SimpleNamespace(
+                chunk=SimpleNamespace(path="docs/project/DEFENSE_KB_CURATED.md"),
+                score=0.91,
+                excerpt="V11c 的召回率达到 99.28%，是所有方法中唯一突破 99% 的方案。",
+            ),
+            SimpleNamespace(
+                chunk=SimpleNamespace(path="models/bert_v11c_boundary_fix/eval_perclass.json"),
+                score=0.77,
+                excerpt="FP=28，FN=6。",
+            ),
+        ]
+        fake_index = SimpleNamespace(
+            search=lambda question, top_k: fake_hits,
+            source_count=18,
+            chunks=[],
+            resolve_code_symbol=lambda term: None,
+        )
+
+        monkeypatch.setattr(api_module, "get_project_knowledge_index", lambda force_refresh=False: fake_index)
+        monkeypatch.setattr(
+            api_module,
+            "build_extractive_answer",
+            lambda question, hits: "结论可以直接参考 [1]，误报和漏报细节见 [2]。",
+        )
+
+        response = asyncio.run(
+            api_module.project_qa(
+                api_module.ProjectQARequest(question="误报和漏报怎么解释", useLLM=False),
+                make_request(),
+                authorization=None,
+                x_internal_token=None,
+            )
+        )
+
+        assert response.evidenceReferences
+        assert response.evidenceReferences[0].label == "[1]"
+        assert response.evidenceReferences[0].path == "docs/project/DEFENSE_KB_CURATED.md"
+        assert response.evidenceReferences[0].context
+
+    def test_project_qa_stream_emits_progress_and_final_response(self, api_context, monkeypatch):
+        fake_hits = [
+            SimpleNamespace(
+                chunk=SimpleNamespace(
+                    path="docs/project/DEFENSE_CURRENT_STATUS.md",
+                    content="当前推荐模型为 bert_v11c_boundary_fix。",
+                ),
+                score=0.91,
+                excerpt="当前推荐模型为 bert_v11c_boundary_fix。",
+            )
+        ]
+
+        monkeypatch.setattr(
+            api_module,
+            "get_project_knowledge_index",
+            lambda force_refresh=False: SimpleNamespace(
+                search=lambda question, top_k: fake_hits,
+                source_count=18,
+            ),
+        )
+        monkeypatch.setattr(
+            api_module,
+            "build_extractive_answer",
+            lambda question, hits: "extractive fallback",
+        )
+        monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+
+        class FakeStreamResponse:
+            status_code = 200
+            headers = {"content-type": "text/event-stream"}
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc, tb):
+                return None
+
+            async def aiter_lines(self):
+                yield 'data: {"choices":[{"delta":{"reasoning_content":"先核对仓库证据。"}}]}'
+                yield 'data: {"choices":[{"delta":{"content":"这是流式生成的答辩回答。"}}]}'
+                yield "data: [DONE]"
+
+        class FakeAsyncClient:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc, tb):
+                return None
+
+            def stream(self, method, url, headers=None, json=None):
+                return FakeStreamResponse()
+
+        monkeypatch.setattr(api_module.httpx, "AsyncClient", FakeAsyncClient)
+
+        response = asyncio.run(
+            api_module.project_qa_stream(
+                api_module.ProjectQARequest(question="当前推荐模型是什么"),
+                make_request(),
+                authorization=None,
+                x_internal_token=None,
+            )
+        )
+        body = asyncio.run(collect_streaming_body(response))
+        events = [json.loads(line) for line in body.splitlines() if line.strip()]
+
+        assert any(event["type"] == "status" for event in events)
+        assert any(event["type"] == "thinking_delta" for event in events)
+        assert any(event["type"] == "answer_delta" for event in events)
+
+        final_event = next(event for event in events if event["type"] == "final")
+        assert final_event["response"]["answer"] == "这是流式生成的答辩回答。"
+        assert final_event["response"]["mode"] == "rag"
+        assert final_event["response"]["sources"][0]["path"] == "docs/project/DEFENSE_CURRENT_STATUS.md"
 
 
 class TestProjectQAMaterialsEndpoint:
@@ -659,7 +830,7 @@ class TestBatchDetectEndpoint:
         assert len(response.results) == 3
         assert response.results[0].type == "human"
         assert response.results[1].type == "ai"
-        assert response.results[2].type == "mixed"
+        assert response.results[2].type == "ai"
         assert response.modelVersion == api_module.MODEL_VERSION
 
     def test_batch_detect_rejects_over_limit(self):
