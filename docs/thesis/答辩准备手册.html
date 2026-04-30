@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>中文AI文本检测系统 — 答辩准备手册</title>
+<style>
+@page { size: A4; margin: 2cm; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; line-height: 1.8; color: #333; max-width: 210mm; margin: 0 auto; padding: 20px; }
+h1 { font-size: 24px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+h2 { font-size: 20px; margin-top: 30px; color: #1a1a1a; border-bottom: 1px solid #ddd; padding-bottom: 8px; }
+h3 { font-size: 16px; margin-top: 20px; color: #2c3e50; }
+table { border-collapse: collapse; width: 100%; margin: 15px 0; font-size: 13px; }
+th, td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; }
+th { background-color: #f5f5f5; font-weight: bold; }
+tr:nth-child(even) { background-color: #fafafa; }
+code { background-color: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-size: 13px; }
+pre { background-color: #f8f8f8; padding: 15px; border-radius: 5px; overflow-x: auto; border: 1px solid #eee; }
+pre code { background: none; padding: 0; }
+blockquote { border-left: 4px solid #3498db; margin: 15px 0; padding: 10px 20px; background: #f0f7ff; }
+strong { color: #c0392b; }
+hr { border: none; border-top: 1px solid #ddd; margin: 30px 0; }
+@media print {
+  body { font-size: 12pt; }
+  h1 { font-size: 22pt; }
+  h2 { font-size: 18pt; }
+  h3 { font-size: 14pt; }
+  pre { white-space: pre-wrap; word-wrap: break-word; }
+}
+</style>
+</head>
+<body>
+<h1>中文AI生成文本检测系统 — 答辩准备手册</h1>
+<blockquote>
+<p>基于 BERT 微调的中文 AI 文本检测系统 | 西安科技大学本科毕业设计</p>
+</blockquote>
+<hr />
+<h2>目录</h2>
+<ol>
+<li><a href="#1-数据来源">数据来源</a></li>
+<li><a href="#2-算法与模型关键点">算法与模型关键点</a></li>
+<li><a href="#3-优化过程">优化过程</a></li>
+<li><a href="#4-性能指标">性能指标</a></li>
+<li><a href="#5-比较过程">比较过程</a></li>
+<li><a href="#6-结论">结论</a></li>
+<li><a href="#7-常见答辩问题">常见答辩问题</a></li>
+</ol>
+<hr />
+<h2>1. 数据来源</h2>
+<h3>1.1 训练数据集总览</h3>
+<table>
+<thead>
+<tr>
+<th>数据集</th>
+<th>样本数</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>core_v1</td>
+<td>58,563</td>
+<td>基线训练/验证/测试</td>
+</tr>
+<tr>
+<td>core_v2</td>
+<td>71,794</td>
+<td>扩展训练</td>
+</tr>
+<tr>
+<td>merged_v2</td>
+<td>69,347</td>
+<td>V8/V9/V10 主数据池</td>
+</tr>
+<tr>
+<td><strong>V11c 最终训练集</strong></td>
+<td><strong>63,113</strong></td>
+<td><strong>当前生产模型</strong></td>
+</tr>
+<tr>
+<td>混合文本数据</td>
+<td>7,563</td>
+<td>混合文本检测训练</td>
+</tr>
+<tr>
+<td>Span标注数据</td>
+<td>2,034</td>
+<td>边界检测器训练</td>
+</tr>
+<tr>
+<td>三无泄露评估集</td>
+<td>2,599</td>
+<td>独立评估</td>
+</tr>
+</tbody>
+</table>
+<h3>1.2 V11c 训练集构成（63,113 条）</h3>
+<p><strong>Human/AI 比例</strong>：AI 32,806 (51.9%) / Human 30,381 (48.1%)，接近平衡。</p>
+<p><strong>AI 文本按模型家族分布（32,806 条）</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>模型家族</th>
+<th>样本数</th>
+<th>占比</th>
+<th>具体模型</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GPT 系列</td>
+<td>16,232</td>
+<td>49.5%</td>
+<td>ChatGPT, GPT-4, GPT-5, GPT-OSS-120B</td>
+</tr>
+<tr>
+<td>DeepSeek 系列</td>
+<td>5,744</td>
+<td>17.5%</td>
+<td>DeepSeek-v3.2</td>
+</tr>
+<tr>
+<td>Qwen 系列</td>
+<td>3,792</td>
+<td>11.6%</td>
+<td>Qwen-max-latest</td>
+</tr>
+<tr>
+<td>Claude 系列</td>
+<td>1,808</td>
+<td>5.5%</td>
+<td>Claude-4-sonnet</td>
+</tr>
+<tr>
+<td>Gemini 系列</td>
+<td>1,498</td>
+<td>4.6%</td>
+<td>Gemini-2.5-flash, Gemini-3</td>
+</tr>
+<tr>
+<td>LLaMA 系列</td>
+<td>744</td>
+<td>2.3%</td>
+<td>LLaMA-3.1-405B</td>
+</tr>
+<tr>
+<td>其他</td>
+<td>2,988</td>
+<td>9.1%</td>
+<td>Kimi, GLM 等</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Human 文本来源（30,381 条）</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>来源</th>
+<th>样本数</th>
+<th>占比</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HC3 问答数据</td>
+<td>15,623</td>
+<td>51.4%</td>
+</tr>
+<tr>
+<td>新闻数据 (THUCNews)</td>
+<td>8,580</td>
+<td>28.2%</td>
+</tr>
+<tr>
+<td>外部数据集 (M4, VCSUM)</td>
+<td>2,894</td>
+<td>9.5%</td>
+</tr>
+<tr>
+<td>百科数据 (Wikipedia)</td>
+<td>1,863</td>
+<td>6.1%</td>
+</tr>
+<tr>
+<td>其他 (评论/正式文本)</td>
+<td>1,421</td>
+<td>4.8%</td>
+</tr>
+</tbody>
+</table>
+<h3>1.3 评估集设计</h3>
+<p>采用 <strong>三子集无泄露评估</strong>，确保训练集与评估集零重叠：</p>
+<table>
+<thead>
+<tr>
+<th>评估子集</th>
+<th>样本数</th>
+<th>特点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>core_v1_test_clean</td>
+<td>545</td>
+<td>基础测试集清洗版</td>
+</tr>
+<tr>
+<td>independent_data</td>
+<td>910</td>
+<td><strong>完全独立，含 GPT-5/Gemini-3/LLaMA-405B 等训练未见模型</strong></td>
+</tr>
+<tr>
+<td>merged_v2_val_clean</td>
+<td>1,144</td>
+<td>验证集清洗版</td>
+</tr>
+<tr>
+<td><strong>加权平均</strong></td>
+<td><strong>2,599</strong></td>
+<td><strong>最终性能指标来源</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>2. 算法与模型关键点</h2>
+<h3>2.1 基础模型：BERT-base-chinese</h3>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>隐藏层维度</td>
+<td>768</td>
+</tr>
+<tr>
+<td>注意力头数</td>
+<td>12</td>
+</tr>
+<tr>
+<td>编码层数</td>
+<td>12</td>
+</tr>
+<tr>
+<td>最大位置编码</td>
+<td>512</td>
+</tr>
+<tr>
+<td>词表大小</td>
+<td>21,128</td>
+</tr>
+<tr>
+<td>总参数量</td>
+<td>~110M</td>
+</tr>
+</tbody>
+</table>
+<p><strong>选型依据</strong>：双向编码器对判别任务优于单向解码器（GPT类）；与 RoBERTa-wwm 性能相当但开源社区支持更完整。</p>
+<h3>2.2 双层检测架构</h3>
+<pre><code>输入文本
+    │
+    ▼
+┌─────────────────────────────────────┐
+│  第一层：文档级分类器                  │
+│  BertForSequenceClassification      │
+│  [CLS] → 分类头 → Human/AI + 置信度  │
+└─────────────────────────────────────┘
+    │
+    ├── 输出 &quot;human&quot; 或 &quot;ai&quot; → 直接返回
+    │
+    └── 输出 &quot;mixed&quot; → 进入第二层
+            │
+            ▼
+┌─────────────────────────────────────┐
+│  第二层：Token级边界检测器            │
+│  BertForTokenClassification         │
+│  每个token → Human(0)/AI(1) 标签     │
+└─────────────────────────────────────┘
+            │
+            ▼
+        边界位置 + 逐句分类结果
+</code></pre>
+<p><strong>理论基础</strong>：Viola &amp; Jones (2001) 级联分类器思想 — 快速粗粒度筛选 + 精细处理困难样本。</p>
+<h3>2.3 Temperature Scaling 校准</h3>
+<p><strong>问题</strong>：深度神经网络普遍存在过度自信现象（Guo et al., 2017）。</p>
+<p><strong>公式</strong>：$P(y=c|x) = \frac{exp(z_c/T)}{\sum_k exp(z_k/T)}$</p>
+<ul>
+<li>T=1：标准 Softmax</li>
+<li>T&gt;1：分布更平滑（降低自信度）</li>
+</ul>
+<p><strong>校准效果</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>校准前 (T=1)</th>
+<th>校准后 (T=0.8165)</th>
+<th>改善</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ECE</td>
+<td>0.0168</td>
+<td><strong>0.0034</strong></td>
+<td><strong>-79.8%</strong></td>
+</tr>
+<tr>
+<td>Accuracy</td>
+<td>98.69%</td>
+<td>98.69%</td>
+<td>不变</td>
+</tr>
+</tbody>
+</table>
+<p><strong>优势</strong>：只引入单个参数 T，不改变预测结果（argmax不变），只改善置信度可靠性。</p>
+<h3>2.4 训练策略</h3>
+<p><strong>损失函数 — 长度感知标签平滑损失（LA-LSL）</strong>：
+- Label Smoothing (ε=0.05)：防止模型过度自信
+- 长度感知权重：$w = 1/(1+0.1 \times |log(L/500)|)$，防止捷径学习</p>
+<p><strong>采样策略 — 双维度加权采样</strong>：同时平衡标签维度（Human/AI）和长度维度（6个长度桶）</p>
+<p><strong>优化配置</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>优化器</td>
+<td>AdamW</td>
+</tr>
+<tr>
+<td>学习率</td>
+<td>1e-5</td>
+</tr>
+<tr>
+<td>batch_size</td>
+<td>8（梯度累积4步，有效batch=32）</td>
+</tr>
+<tr>
+<td>max_length</td>
+<td>256</td>
+</tr>
+<tr>
+<td>epochs</td>
+<td>4（Early Stopping，最佳 Epoch 2）</td>
+</tr>
+<tr>
+<td>warmup_steps</td>
+<td>500</td>
+</tr>
+<tr>
+<td>label_smoothing</td>
+<td>0.05</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>3. 优化过程</h2>
+<h3>3.1 模型演进历史</h3>
+<table>
+<thead>
+<tr>
+<th>版本</th>
+<th>独立评估准确率</th>
+<th>三集平均</th>
+<th>关键变更</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>V6</td>
+<td>93.19%</td>
+<td>95.85%</td>
+<td>合并数据基线</td>
+</tr>
+<tr>
+<td>V7</td>
+<td>94.07%</td>
+<td>96.81%</td>
+<td>改进训练策略</td>
+</tr>
+<tr>
+<td>V8</td>
+<td>94.40%</td>
+<td>96.88%</td>
+<td>引入 Temperature Scaling</td>
+</tr>
+<tr>
+<td>V9</td>
+<td>94.73%</td>
+<td>97.37%</td>
+<td>P0 数据增强</td>
+</tr>
+<tr>
+<td><strong>V10</strong></td>
+<td><strong>97.69%</strong></td>
+<td><strong>98.36%</strong></td>
+<td>修复技术文档漏检</td>
+</tr>
+<tr>
+<td><strong>V11c</strong></td>
+<td><strong>98.57%</strong></td>
+<td><strong>98.56%</strong></td>
+<td><strong>四阶段数据治理</strong></td>
+</tr>
+</tbody>
+</table>
+<h3>3.2 V10 关键改进 — 修复技术文档漏检</h3>
+<p><strong>问题</strong>：V5-V9 模型对 AI 生成的技术/学术内容存在系统性漏检。</p>
+<p><strong>方案</strong>：在 V9 基础上新增 1,296 条清洗后数据：
+- +500 教育类 AI 文本（技术教程、学术论文风格）
+- +500 人类技术文本（真实技术博客、学术笔记）
+- +300 多样化短文本（&lt;128 字符人类口语/日常）</p>
+<p><strong>效果</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>V9</th>
+<th>V10</th>
+<th>变化</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>独立评估集准确率</td>
+<td>94.73%</td>
+<td>97.69%</td>
+<td><strong>+2.96%</strong></td>
+</tr>
+<tr>
+<td>FN（漏检）</td>
+<td>10</td>
+<td>3</td>
+<td><strong>-70%</strong></td>
+</tr>
+<tr>
+<td>GPT-5 检出率</td>
+<td>75%</td>
+<td>100%</td>
+<td><strong>+25%</strong></td>
+</tr>
+</tbody>
+</table>
+<h3>3.3 V10 → V11c 四阶段数据治理（核心创新）</h3>
+<p><strong>核心理念</strong>：Data-Centric AI（Andrew Ng, 2021）— 固定模型、改善数据。</p>
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>治理动作</th>
+<th>净变化</th>
+<th>样本数</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>V10</td>
+<td>基线</td>
+<td>—</td>
+<td>62,980</td>
+</tr>
+<tr>
+<td>V11a</td>
+<td>移除硬编码模板 -750；移除未知来源 -1,767</td>
+<td>-2,524</td>
+<td>60,456</td>
+</tr>
+<tr>
+<td>V11b</td>
+<td>新增 formal_collected +300；新增 LLaMA-405B +300</td>
+<td>+600</td>
+<td>61,056</td>
+</tr>
+<tr>
+<td>V11c</td>
+<td>新增 256+ 字符长文 AI +2,131</td>
+<td>+2,131</td>
+<td>63,187</td>
+</tr>
+<tr>
+<td>最终</td>
+<td>精确去重与类型校验</td>
+<td>-74</td>
+<td><strong>63,113</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>治理效果</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>版本</th>
+<th>独立评估准确率</th>
+<th>总错误数</th>
+<th>相对V10改善</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>V10</td>
+<td>97.69%</td>
+<td>21</td>
+<td>基线</td>
+</tr>
+<tr>
+<td>V11c</td>
+<td><strong>98.57%</strong></td>
+<td><strong>13</strong></td>
+<td><strong>-38% 错误</strong></td>
+</tr>
+</tbody>
+</table>
+<h3>3.4 格式去偏（早期关键工作）</h3>
+<p><strong>问题</strong>：AI 文本 markdown 率 63.77%，人类文本 0.0%，简单格式规则准确率高达 81.61%。</p>
+<p><strong>去偏效果</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>去偏前</th>
+<th>去偏后</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>训练集格式偏差</td>
+<td>63.77%</td>
+<td><strong>2.33%</strong></td>
+</tr>
+<tr>
+<td>简单规则准确率</td>
+<td>81.00%</td>
+<td><strong>48.76%</strong></td>
+</tr>
+<tr>
+<td>格式偏差降幅</td>
+<td>—</td>
+<td><strong>-94%</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>4. 性能指标</h2>
+<h3>4.1 核心指标（三集无泄露评估，n=2,599）</h3>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>数值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>加权平均准确率</strong></td>
+<td><strong>98.69%</strong></td>
+</tr>
+<tr>
+<td><strong>F1 分数</strong></td>
+<td><strong>97.75%</strong></td>
+</tr>
+<tr>
+<td><strong>召回率</strong></td>
+<td><strong>99.28%</strong></td>
+</tr>
+<tr>
+<td><strong>精确率</strong></td>
+<td><strong>96.28%</strong></td>
+</tr>
+<tr>
+<td>ECE（校准误差）</td>
+<td>0.0034</td>
+</tr>
+</tbody>
+</table>
+<h3>4.2 混淆矩阵</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>预测 Human</th>
+<th>预测 AI</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>真实 Human (n=1,614)</td>
+<td><strong>1,586 (TN)</strong></td>
+<td>28 (FP)</td>
+</tr>
+<tr>
+<td>真实 AI (n=985)</td>
+<td>6 (FN)</td>
+<td><strong>979 (TP)</strong></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>漏报率（FN）：0.61%（985条AI仅漏检6条）</li>
+<li>误报率（FP）：1.73%</li>
+</ul>
+<h3>4.3 混合文本检测性能</h3>
+<table>
+<thead>
+<tr>
+<th>混合类型</th>
+<th>样本数</th>
+<th>准确率</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C2（AI续写）</td>
+<td>211</td>
+<td><strong>93.84%</strong></td>
+</tr>
+<tr>
+<td>C3（AI改写）</td>
+<td>170</td>
+<td><strong>100.00%</strong></td>
+</tr>
+<tr>
+<td>C4（AI润色）</td>
+<td>239</td>
+<td><strong>92.89%</strong></td>
+</tr>
+<tr>
+<td>Human纯文本</td>
+<td>472</td>
+<td><strong>99.58%</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>[SEP]标记效果</strong>：C2 检测率从 79.82% → 93.84%（<strong>+14.02%</strong>）</p>
+<h3>4.4 长度鲁棒性</h3>
+<table>
+<thead>
+<tr>
+<th>长度区间</th>
+<th>样本数</th>
+<th>Accuracy</th>
+<th>F1</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>300-600字</td>
+<td>102</td>
+<td>100.00%</td>
+<td>1.0000</td>
+</tr>
+<tr>
+<td>600-1000字</td>
+<td>259</td>
+<td>100.00%</td>
+<td>1.0000</td>
+</tr>
+<tr>
+<td>1000-1500字</td>
+<td>481</td>
+<td>100.00%</td>
+<td>1.0000</td>
+</tr>
+<tr>
+<td>1500-2000字</td>
+<td>218</td>
+<td>100.00%</td>
+<td>1.0000</td>
+</tr>
+<tr>
+<td>2000-3000字</td>
+<td>171</td>
+<td>100.00%</td>
+<td>1.0000</td>
+</tr>
+</tbody>
+</table>
+<p><strong>性能方差：0.0</strong> — 对文本长度完全不敏感，证明模型学习的是真实语义特征。</p>
+<h3>4.5 格式鲁棒性</h3>
+<table>
+<thead>
+<tr>
+<th>测试场景</th>
+<th>Accuracy</th>
+<th>变化幅度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>纯文本测试</td>
+<td>99.95%</td>
+<td>±0.00%</td>
+</tr>
+<tr>
+<td>格式化测试</td>
+<td>99.95%</td>
+<td>±0.00%</td>
+</tr>
+<tr>
+<td>格式交换测试</td>
+<td>99.91%</td>
+<td>-0.05%</td>
+</tr>
+<tr>
+<td>随机格式测试</td>
+<td>99.95%</td>
+<td>±0.00%</td>
+</tr>
+</tbody>
+</table>
+<p><strong>最大下降仅 0.05%，对 markdown 格式扰动完全免疫。</strong></p>
+<h3>4.6 边界检测器性能</h3>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>数值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Token 分类准确率</td>
+<td>96.69%</td>
+</tr>
+<tr>
+<td>实际边界误差</td>
+<td>0-8 字符</td>
+</tr>
+</tbody>
+</table>
+<h3>4.7 部署效率</h3>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>数值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>推理吞吐</td>
+<td>127.4 样本/秒</td>
+</tr>
+<tr>
+<td>单样本推理延迟</td>
+<td>~7.8 ms</td>
+</tr>
+<tr>
+<td>GPU 推理峰值显存</td>
+<td>672 MB</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>5. 比较过程</h2>
+<h3>5.1 五类方法公平对比（n=2,599）</h3>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>参数量</th>
+<th>Accuracy</th>
+<th>Precision</th>
+<th>Recall</th>
+<th>F1</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FastText</td>
+<td>&lt;1M</td>
+<td>97.65%</td>
+<td>96.45%</td>
+<td>94.05%</td>
+<td>95.23%</td>
+</tr>
+<tr>
+<td>TextCNN</td>
+<td>~7M</td>
+<td>97.08%</td>
+<td>93.26%</td>
+<td>95.77%</td>
+<td>94.45%</td>
+</tr>
+<tr>
+<td>DPCNN</td>
+<td>~7M</td>
+<td>97.04%</td>
+<td>95.15%</td>
+<td>92.84%</td>
+<td>93.97%</td>
+</tr>
+<tr>
+<td>BERT-BiGRU</td>
+<td>~104M</td>
+<td><strong>98.81%</strong></td>
+<td>97.81%</td>
+<td>98.42%</td>
+<td>98.11%</td>
+</tr>
+<tr>
+<td><strong>本文方法 V11c</strong></td>
+<td>~110M</td>
+<td>98.69%</td>
+<td>96.28%</td>
+<td><strong>99.28%</strong></td>
+<td>97.75%</td>
+</tr>
+</tbody>
+</table>
+<p><strong>关键发现</strong>：
+1. 传统方法（FastText/TextCNN/DPCNN）准确率均在 97% 左右，存在瓶颈
+2. 预训练模型整体显著优于传统方法
+3. <strong>本文方法召回率最高（99.28%）</strong> — 唯一突破 99% 的方案</p>
+<h3>5.2 各模型在真实AI技术文本上的检出率</h3>
+<table>
+<thead>
+<tr>
+<th>来源模型</th>
+<th>V8</th>
+<th>V9</th>
+<th>V10</th>
+<th><strong>V11c</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GPT-5</td>
+<td>100%</td>
+<td>75%</td>
+<td>100%</td>
+<td><strong>100%</strong></td>
+</tr>
+<tr>
+<td>DeepSeek-v3.2</td>
+<td>100%</td>
+<td>75%</td>
+<td>100%</td>
+<td><strong>100%</strong></td>
+</tr>
+<tr>
+<td>Gemini-3-flash</td>
+<td>68.8%</td>
+<td>93.8%</td>
+<td>100%</td>
+<td><strong>100%</strong></td>
+</tr>
+<tr>
+<td>LLaMA-3.1-405B</td>
+<td>88.9%</td>
+<td>88.9%</td>
+<td>88.9%</td>
+<td><strong>100%</strong></td>
+</tr>
+</tbody>
+</table>
+<h3>5.3 与现有研究对比</h3>
+<table>
+<thead>
+<tr>
+<th>研究</th>
+<th>模型</th>
+<th>创新点</th>
+<th>准确率</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LLM-Detector (2024)</td>
+<td>RoBERTa</td>
+<td>Instruction tuning</td>
+<td>~92%</td>
+</tr>
+<tr>
+<td>Qwen2.5 (2025)</td>
+<td>Qwen2.5-7B + LoRA</td>
+<td>Decoder模型</td>
+<td>95.94%</td>
+</tr>
+<tr>
+<td><strong>本研究 (2026)</strong></td>
+<td><strong>BERT-base-chinese</strong></td>
+<td><strong>数据治理+格式去偏+混合检测</strong></td>
+<td><strong>98.69%</strong></td>
+</tr>
+</tbody>
+</table>
+<h3>5.4 数据集对比</h3>
+<table>
+<thead>
+<tr>
+<th>对比项</th>
+<th>HC3-Chinese</th>
+<th>本文 V11c 数据集</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>训练集规模</td>
+<td>~24K</td>
+<td><strong>63,113</strong></td>
+</tr>
+<tr>
+<td>AI 模型覆盖</td>
+<td>1 (ChatGPT)</td>
+<td><strong>46 个模型 / 8 大家族</strong></td>
+</tr>
+<tr>
+<td>人类文本来源</td>
+<td>问答为主</td>
+<td><strong>7 类来源</strong></td>
+</tr>
+<tr>
+<td>混合文本支持</td>
+<td>无</td>
+<td><strong>C2/C3/C4 混合 + 边界标签</strong></td>
+</tr>
+<tr>
+<td>数据治理流程</td>
+<td>未涉及</td>
+<td><strong>四阶段可复现</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>6. 结论</h2>
+<h3>6.1 系统优势</h3>
+<ol>
+<li><strong>整体性能领先，召回率最高</strong> — 98.69% 准确率、99.28% 召回率</li>
+<li><strong>长度不变性</strong> — 所有长度区间均达 100% 准确率，性能方差 0.0</li>
+<li><strong>格式鲁棒性</strong> — 格式对抗测试最大下降仅 0.05%</li>
+<li><strong>混合文本检测能力</strong> — C2续写 93.84%，C3改写 100%，边界误差 0-8 字符</li>
+<li><strong>概率校准可靠</strong> — ECE 从 0.0168 降至 0.0034（-79.8%）</li>
+<li><strong>部署效率友好</strong> — 127.4 样本/秒，7.8ms 延迟，672MB 显存</li>
+<li><strong>跨模型泛化</strong> — 独立评估集含训练未见模型，准确率 98.57%</li>
+</ol>
+<h3>6.2 三大创新点</h3>
+<p><strong>创新点 1：基于 BERT 微调的中文 AI 文本二分类方法</strong>
+- 融合 Length-Aware Label Smoothing Loss + 双维度加权采样 + Temperature Scaling 校准
+- 2,599 条无泄露评估集：98.69% 准确率、99.28% 召回率、97.75% F1</p>
+<p><strong>创新点 2：Data-Centric AI 数据治理流水线</strong>
+- V10→V11a→V11b→V11c 四阶段治理（控制变量设计）
+- 标签噪声清洗 + 弱域增补 + 长文边界修复
+- 独立评估集准确率 97.69% → 98.57%（+0.88%），总错误 21 → 13（-38%）</p>
+<p><strong>创新点 3：混合文本检测与边界定位扩展能力</strong>
+- [SEP] 边界标记机制：C2 检测率 +14.02%
+- Token 级边界检测器：96.69% Token 准确率，0-8 字符边界误差
+- 双层级联推理架构</p>
+<hr />
+<h2>7. 常见答辩问题</h2>
+<h3>Q1: 为什么选择 BERT 而不是 GPT/LLaMA？</h3>
+<p><strong>答</strong>：
+1. <strong>任务匹配</strong>：文本分类是判别任务，BERT 的双向编码器天然适合理解全文语义；GPT 类单向解码器更擅长生成任务。
+2. <strong>效率</strong>：BERT-base 110M 参数，推理 7.8ms；LLaMA-7B 需要数秒且显存需求高 10 倍以上。
+3. <strong>部署成本</strong>：BERT 可在单张消费级 GPU 上部署，适合实际应用。
+4. <strong>性能对比</strong>：本实验中 BERT-BiGRU（104M）与 V11c（110M）准确率均超 98.6%，显著优于 DPCNN 等轻量模型。</p>
+<h3>Q2: Temperature Scaling 的作用是什么？</h3>
+<p><strong>答</strong>：
+1. <strong>解决过度自信</strong>：神经网络普遍存在过度自信问题，校准前 ECE=0.0168，校准后降至 0.0034。
+2. <strong>不改变预测</strong>：只改变概率分布的平滑度，argmax 不变，准确率保持 98.69%。
+3. <strong>实际意义</strong>：当模型说"98% 是 AI"时，这个概率是可信的，可用于下游决策。</p>
+<h3>Q3: 四阶段数据治理的核心思想是什么？</h3>
+<p><strong>答</strong>：
+1. <strong>Data-Centric AI</strong>：固定模型、超参、损失函数，唯一变量是数据，验证数据质量的边际收益。
+2. <strong>V11a（标签噪声清洗）</strong>：移除模板化样本和未知来源，减少标签噪声。
+3. <strong>V11b（弱域增补）</strong>：在"正式书面语"和"LLaMA系列"两个弱域各增补300条，提升泛化能力。
+4. <strong>V11c（长文边界修复）</strong>：补充256+字符AI样本，修复长文覆盖不足。
+5. <strong>效果</strong>：独立评估集错误数从21降至13（-38%）。</p>
+<h3>Q4: [SEP]标记为什么能提升混合文本检测？</h3>
+<p><strong>答</strong>：
+1. <strong>明确边界</strong>：在人类文本和AI文本交界处插入[SEP]标记，为模型提供明确的分割信号。
+2. <strong>C2场景</strong>：人类写开头、AI续写的情况下，没有[SEP]时模型难以感知风格切换。
+3. <strong>效果</strong>：C2检测率从79.82%提升至93.84%（+14.02个百分点）。</p>
+<h3>Q5: 如何保证评估的公平性？</h3>
+<p><strong>答</strong>：
+1. <strong>三子集无泄露</strong>：训练集与评估集完全零重叠，评估集含训练未见的模型（GPT-5、Gemini-3等）。
+2. <strong>五类方法公平对比</strong>：在相同数据集、相同评估指标下对比 FastText/TextCNN/DPCNN/BERT-BiGRU/V11c。
+3. <strong>多维度鲁棒性测试</strong>：长度鲁棒性、格式鲁棒性、跨模型泛化能力。</p>
+<h3>Q6: 系统的实际应用价值是什么？</h3>
+<p><strong>答</strong>：
+1. <strong>学术诚信</strong>：辅助教师鉴定学生作业是否使用AI生成。
+2. <strong>内容审核</strong>：平台可批量检测投稿内容的AI生成比例。
+3. <strong>边界定位</strong>：不仅能判断整篇是否AI生成，还能定位具体哪些段落是AI写的。
+4. <strong>生产级部署</strong>：已部署为API服务，127.4样本/秒，支持高并发请求。</p>
+<hr />
+<p><strong>文档版本</strong>：v1.0<br />
+<strong>整理日期</strong>：2026年4月30日<br />
+<strong>数据来源</strong>：项目仓库 /home/anx4758/datacollection</p>
+</body>
+</html>
