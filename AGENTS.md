@@ -301,3 +301,37 @@ if torch.cuda.is_available():
 - **Training loop**: Forward pass, loss computation, backward pass, optimizer step
 - **Evaluation**: Disable gradient computation, collect predictions, compute metrics
 - **Model checkpointing**: Save best model based on validation performance
+
+## Deployment
+
+### Server Info
+- Host: `8.141.1.249` (阿里云 ECS)
+- User: `root`
+- Path: `/opt/datacollection`
+- Docker: `datacollection-backend` + `datacollection-nginx`
+
+### Sync Backend to Server
+```bash
+# 正常同步（只更新文件 + 重启容器，不重新构建镜像）
+bash scripts/deployment/sync_backend_server.sh --host 8.141.1.249
+
+# 如果 requirements_api.txt 变了才加 --build
+bash scripts/deployment/sync_backend_server.sh --host 8.141.1.249 --build
+```
+
+### 重要教训
+**不要随便加 `--build`！** `--build` 会重新执行 `pip install -r requirements_api.txt`，torch 915MB 要下载很久。只有 `requirements_api.txt` 变了才需要 `--build`。日常更新 `api.py` 或 `project_qa.py` 只需要默认的 `--no-build` 即可。
+
+### Push to GitHub
+```bash
+# 前端（独立子模块）
+cd frontend && git push origin main
+
+# 后端（主仓库）
+git push origin master
+```
+
+### Verify Deployment
+```bash
+ssh root@8.141.1.249 "docker exec datacollection-backend-1 python -c \"import urllib.request; print(urllib.request.urlopen('http://localhost:8000/api/health').read().decode())\""
+```
