@@ -4,7 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Chinese AI-generated text detection system: sentence-level classification (human vs AI) + token-level boundary localization for mixed texts. Core innovation: `[SEP]` boundary marker mechanism between human-written and AI-generated segments significantly improves mixed-text detection.
+Chinese AI-generated text detection system. The current online path is a calibrated
+V11c BERT binary classifier that returns Human / AI. Mixed-text boundary detection
+exists as historical experimental work, but is not enabled by default because the
+mixed dataset is not large or representative enough for stable production use.
 
 **Tech stack**: Python 3.12, PyTorch 2.0+, Transformers 4.30+, FastAPI, BERT-base-chinese (fine-tuned)
 **Frontend**: Next.js 16 + React 19 + TailwindCSS 4 (in `frontend/`, independent submodule)
@@ -50,41 +53,40 @@ docker compose up -d                      # Full stack: backend + frontend + ngi
 
 ## Architecture
 
-### Two-Model Pipeline
+### Online Pipeline
 
 ```
-Input Text → Classifier (bert_v11c_boundary_fix) → {Human, AI, Mixed}
-                                                        ↓ (if Mixed)
-                                              Span Detector (bert_span_detector)
+Input Text → Classifier (bert_v11c_boundary_fix) → {Human, AI}
                                                         ↓
-                                              Token-level boundary labels
+                                      Risk flags + sentence-level analysis
 ```
 
-- **Classifier**: `BertForSequenceClassification` — 3-class (human/AI/mixed), 98.56% accuracy
-- **Span Detector**: `BertForTokenClassification` — token-level 0/1 labels, 96.69% accuracy
+- **Classifier**: `BertForSequenceClassification` — binary Human/AI classifier, 98.56% three-set average
+- **Span Detector**: historical `BertForTokenClassification` experiment; only loads when `DETECTOR_ENABLE_SPAN=1`
 - **Temperature Scaling**: T=0.8165, ECE=0.0034 for calibrated confidence scores
 
 ### API Endpoints (api/api.py)
 
 | Endpoint | Purpose |
 |----------|---------|
-| `POST /api/detect` | Main detection: returns label + confidence + boundary spans |
+| `POST /api/detect` | Main detection: returns Human/AI label, confidence, risk flags, sentence results |
 | `POST /v1/chat/completions` | OpenAI-compatible wrapper for integration |
 | `GET /api/health` | Health check |
 
-API env vars: `DETECTOR_CLASSIFIER_MODEL`, `DETECTOR_SPAN_MODEL`, `DETECTOR_MAX_LENGTH=256`, `DETECTOR_TEMPERATURE=0.8165`, `DETECTOR_DECISION_THRESHOLD=0.8`
+API env vars: `DETECTOR_CLASSIFIER_MODEL`, `DETECTOR_ENABLE_SPAN=0`, `DETECTOR_SPAN_MODEL`, `DETECTOR_MAX_LENGTH=256`, `DETECTOR_TEMPERATURE=0.8165`, `DETECTOR_DECISION_THRESHOLD=0.8`
 
 ### Training Pipeline
 
-1. **Data cleaning** (`scripts/data_cleaning/`): `add_sep_markers.py` inserts `[SEP]` at human↔AI boundaries; `prepare_span_labels.py` generates token-level labels
+1. **Data cleaning** (`scripts/data_cleaning/`): current V11c path focuses on template/unknown removal, weak-domain supplementation, and long-AI sample repair; legacy mixed-text scripts remain for reproducibility
 2. **Dataset prep**: `scripts/bert_prep/create_bert_dataset.py` → `AIDetectionDataset` + `dynamic_collate_fn`
 3. **Training** (`scripts/training/train_bert_improved.py`): `BERTTrainer` class with warmup, label_smoothing=0.05, length-weighted loss
-4. **Evaluation** (`scripts/evaluation/`): ID/OOD/Mixed split evaluation via `datasets/eval/splits/v1/`
+4. **Evaluation** (`scripts/evaluation/`): ID/OOD split evaluation and hard-case analysis via `datasets/eval/splits/v1/`
 
 ### Key Data Format
 
-CSV files with columns: `text`, `label` (0=Human, 1=AI), `category`, `source`
-Mixed text categories: C2 (human intro + AI continuation), C3 (AI rewrite), C4 (AI polishing)
+CSV files with columns: `text`, `label` (0=Human, 1=AI), `category`, `source`.
+Mixed text categories (C2/C3/C4) are retained as historical experimental data and
+should not be described as the current online output.
 
 ## Module Responsibilities
 
@@ -106,7 +108,7 @@ Each module with a `CLAUDE.md` contains detailed guidance for that subsystem.
 | Model | Type | Metric |
 |-------|------|--------|
 | `models/bert_v11c_boundary_fix/` | Classifier | 98.56% (3-set avg), 98.57% (independent eval) |
-| `models/bert_span_detector/` | Token classifier | 96.69% token accuracy |
+| `models/bert_span_detector/` | Historical token classifier | disabled by default |
 
 V11c training config: batch_size=8, accum_steps=4, max_length=256, epochs=4, lr=1e-05, label_smoothing=0.05
 

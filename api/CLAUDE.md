@@ -31,11 +31,11 @@ python api/api.py
 响应:
 ```json
 {
-  "type": "human|ai|mixed",
+  "type": "human|ai",
   "confidence": 95.5,
   "humanPercentage": 30,
   "aiPercentage": 70,
-  "boundary": 2,
+  "boundary": null,
   "sentences": [
     {"text": "句子1", "isAI": false, "confidence": 98.0},
     {"text": "句子2", "isAI": true, "confidence": 95.0}
@@ -95,13 +95,14 @@ python api/api.py
 ### 模型依赖
 
 - `models/bert_v11c_boundary_fix/` - 分类器模型 (默认)
-- `models/bert_span_detector/` - 边界检测器模型
+- `models/bert_span_detector/` - 历史边界检测实验模型，默认不在 API 主链路启用
 
 ### 环境变量
 
 ```bash
 DETECTOR_CLASSIFIER_MODEL=models/bert_v11c_boundary_fix
-DETECTOR_SPAN_MODEL=models/bert_span_detector
+DETECTOR_ENABLE_SPAN=0          # 默认不启用混合文本边界模型
+DETECTOR_SPAN_MODEL=models/bert_span_detector  # 仅 DETECTOR_ENABLE_SPAN=1 时使用
 DETECTOR_MAX_LENGTH=256
 DETECTOR_TEMPERATURE=0.8165
 DETECTOR_DECISION_THRESHOLD=0.8
@@ -122,7 +123,7 @@ class DetectRequest(BaseModel):
 ### DetectionResponse
 ```python
 class DetectionResponse(BaseModel):
-    type: str                    # "human" | "ai" | "mixed"
+    type: str                    # "human" | "ai"
     confidence: float
     humanPercentage: int
     aiPercentage: int
@@ -140,7 +141,7 @@ class DetectionResponse(BaseModel):
 
 核心检测类，包含:
 - `classify(text)` - 文本分类
-- `detect_boundary(text)` - 边界检测
+- `detect_boundary(text)` - 历史边界检测辅助；仅 `DETECTOR_ENABLE_SPAN=1` 时启用
 
 ## 测试与质量
 
@@ -157,7 +158,7 @@ python api/tests/test_v0_api.py
 ## 常见问题 (FAQ)
 
 **Q: 模型加载失败?**
-A: 确保 `models/bert_v11c_boundary_fix/` 和 `models/bert_span_detector/` 目录存在且包含完整模型文件。
+A: 默认只需要确保 `models/bert_v11c_boundary_fix/` 目录存在且包含完整模型文件；只有显式设置 `DETECTOR_ENABLE_SPAN=1` 时才需要 `models/bert_span_detector/`。
 
 **Q: CUDA 不可用?**
 A: 系统会自动回退到 CPU 模式，性能会下降但功能正常。

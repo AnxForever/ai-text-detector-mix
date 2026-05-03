@@ -129,11 +129,11 @@ class TestCollectRiskFlags:
         )
         assert "template_like" in flags
 
-    def test_mixed_without_boundary(self):
+    def test_non_binary_label_does_not_add_legacy_mixed_flag(self):
         flags = collect_risk_flags(
             "一些文本内容", confidence=90, boundary_sentence_index=None, result_type="mixed"
         )
-        assert "mixed_without_boundary" in flags
+        assert "mixed_without_boundary" not in flags
 
     def test_no_flags_normal_text(self):
         text = "这是一段正常长度的文本，" * 15  # >128 chars to avoid short_text flag
@@ -286,6 +286,7 @@ class TestProjectAgentLiveDetector:
 
         monkeypatch.setattr("api.api.detector", None)
         monkeypatch.setattr("api.api.HybridTextDetector", lambda: FakeDetector())
+        monkeypatch.setattr("api.api.ENABLE_SPAN_DETECTOR", True)
         monkeypatch.setattr("api.api.SPAN_TRIGGER_MIN_CHARS", 0)
 
         summary = run_project_agent_live_detection("前半段像人写的，后半段更像AI。")

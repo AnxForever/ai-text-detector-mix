@@ -70,13 +70,16 @@ def api_context(mock_detector):
     """Install a mock detector and disable auth for direct endpoint tests."""
     original_token_flag = api_module.ENFORCE_INTERNAL_TOKEN
     original_detector = api_module.detector
+    original_span_flag = api_module.ENABLE_SPAN_DETECTOR
     api_module.ENFORCE_INTERNAL_TOKEN = False
     api_module.detector = mock_detector
+    api_module.ENABLE_SPAN_DETECTOR = False
 
     yield mock_detector
 
     api_module.detector = original_detector
     api_module.ENFORCE_INTERNAL_TOKEN = original_token_flag
+    api_module.ENABLE_SPAN_DETECTOR = original_span_flag
     api_module.RATE_LIMIT_STATE.clear()
 
 
@@ -181,6 +184,7 @@ class TestDetectEndpoint:
             "text": "test",
         }
         # New policy: span detector is gated by text length. Lower threshold for this unit test.
+        monkeypatch.setattr(api_module, "ENABLE_SPAN_DETECTOR", True)
         monkeypatch.setattr(api_module, "SPAN_TRIGGER_MIN_CHARS", 0)
 
         response = api_module.detect_text(
@@ -882,8 +886,9 @@ class TestGetClientIp:
 class TestDetectExposesTokenSpans:
     """/api/detect now returns tokenSpans when span detector runs."""
 
-    def test_token_spans_returned_for_long_text(self, api_context):
+    def test_token_spans_returned_for_long_text(self, api_context, monkeypatch):
         mock_det = api_context
+        monkeypatch.setattr(api_module, "ENABLE_SPAN_DETECTOR", True)
         mock_det.classify.return_value = {
             "label": "AI",
             "confidence": 0.9,

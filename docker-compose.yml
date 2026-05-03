@@ -14,7 +14,7 @@ services:
       - .env.deploy
     environment:
       - DETECTOR_CLASSIFIER_MODEL=models/bert_v11c_boundary_fix
-      - DETECTOR_SPAN_MODEL=models/bert_span_detector
+      - DETECTOR_ENABLE_SPAN=0
       - DETECTOR_FEEDBACK_DIR=/app/datasets/feedback_loop
       - DC_DATASETS_DIR=/app/datasets
       - DC_MODELS_DIR=/app/models

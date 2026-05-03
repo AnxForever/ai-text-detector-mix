@@ -128,9 +128,8 @@ _KNOWN_QUERY_PHRASES = (
     "漏报",
     "temperature scaling",
     "ece",
-    "边界定位",
-    "边界检测",
-    "混合文本",
+    "二分类",
+    "人工复核",
     "数据泄露",
     "过拟合",
     "泛化",
@@ -851,21 +850,21 @@ def _expand_project_query(question: str) -> str:
     if _contains_any(lowered, ("gpu", "显卡", "训练环境", "训练时长", "训了多久", "训多久", "训了多长时间")):
         add("实验环境 NVIDIA GeForce RTX 5060 Laptop GPU 8 GB VRAM 最佳模型训练时长 41 分钟")
     if _contains_any(lowered, ("讲讲", "做了啥", "做了什么", "介绍一下", "整个项目", "有啥用", "有什么用", "能干嘛")):
-        add("项目介绍 中文 AI 生成文本检测 BERT 微调 分类检测 混合文本 边界定位 工程部署")
+        add("项目介绍 中文 AI 生成文本检测 BERT 微调 Human AI 二分类 置信度校准 工程部署")
     if _contains_any(lowered, ("英文", "英语", "多语")):
         add("英文文本 中文场景 bert-base-chinese 英文需要重新选择预训练模型 数据和评估协议")
     if _contains_any(lowered, ("数据治理", "数据清洗", "清洗", "治理", "帮助")):
-        add("Data-Centric AI V10 V11c 数据治理 模板样本 unknown 弱域样本 长文边界 97.69 98.57")
+        add("Data-Centric AI V10 V11c 数据治理 模板样本 unknown 弱域样本 长文AI样本 97.69 98.57")
     if _contains_any(lowered, ("死记硬背", "数据泄露", "泄露", "过拟合", "去重")):
         add("数据泄露 无泄露 independent_data 去重 训练未见模型 格式对抗 过拟合")
     if _contains_any(lowered, ("c2", "续写", "一半人写", "一半ai", "人写一段", "混合")):
-        add("C2 AI续写 混合文本 [SEP] 边界标记 79.82 93.84 边界定位")
+        add("混合文本实验 样本规模不足 当前线上不启用 bert_span_detector 不输出 mixed Human AI 二分类")
     if _contains_any(
         lowered, ("别的方法", "基线", "对比方法", "fasttext", "textcnn", "bert-bigru")
     ):
         add("基线方法对比 FastText TextCNN DPCNN BERT-BiGRU 本文方法 V11c 召回率 99.28")
     if _contains_any(lowered, ("硬伤", "缺点", "短板", "不足", "局限", "风险", "不靠谱")):
-        add("局限性 泛化 风险 过拟合 跨域 边界 外部有效性 不足 改进方向")
+        add("局限性 泛化 风险 过拟合 跨域 外部有效性 混合文本不启用 不足 改进方向")
     if _contains_any(lowered, ("靠谱", "可信", "可靠", "准不准", "准吗")):
         add("准确率 98.69 校准 ECE 0.0034 可信度 温度校准 无泄露评估集")
     if _contains_any(lowered, ("改进", "怎么改", "下一步", "未来")):
@@ -877,7 +876,7 @@ def _expand_project_query(question: str) -> str:
     if _contains_any(lowered, ("数据治理", "模型校准", "两者关系")):
         add("Data-Centric AI 数据治理 Temperature Scaling 校准 V10 V11c 模板样本 unknown 弱域")
     if _contains_any(lowered, ("检测能力", "部署效率", "兼顾")):
-        add("双层检测架构 分类器 边界检测器 推理速度 127.4 样本/秒 显存 672 MB 部署")
+        add("V11c 分类器 Human AI 二分类 推理速度 127.4 样本/秒 显存 672 MB 部署")
 
     if not expansions:
         return question
@@ -1165,9 +1164,7 @@ def _question_path_boost(question: str, path: str) -> float:
             "创新",
             "亮点",
             "贡献",
-            "[sep]",
-            "边界",
-            "边界定位",
+            "二分类",
             "混合文本",
             "bert",
             "gpt",

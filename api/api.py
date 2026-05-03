@@ -55,6 +55,12 @@ logger = logging.getLogger(__name__)
 
 CLASSIFIER_MODEL_PATH = os.getenv("DETECTOR_CLASSIFIER_MODEL", "models/bert_v11c_boundary_fix")
 SPAN_MODEL_PATH = os.getenv("DETECTOR_SPAN_MODEL", "models/bert_span_detector")
+ENABLE_SPAN_DETECTOR = os.getenv("DETECTOR_ENABLE_SPAN", "0").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
 USE_INT8 = os.getenv("DETECTOR_USE_INT8", "0").strip().lower() in {"1", "true", "yes"}
 INT8_CLASSIFIER_PATH = os.getenv("DETECTOR_INT8_CLASSIFIER", "models/bert_v11c_int8")
 INT8_SPAN_PATH = os.getenv("DETECTOR_INT8_SPAN", "models/bert_span_int8")
@@ -644,17 +650,17 @@ def _load_quantized_model(model_cls: type, fp32_path: str, state_dict_path: str)
 
 class HybridTextDetector:
     def __init__(self) -> None:
-        if (
-            BertTokenizer is None
-            or BertForSequenceClassification is None
-            or BertForTokenClassification is None
-        ):
+        if BertTokenizer is None or BertForSequenceClassification is None:
             raise RuntimeError("transformers is required to load detector models")
+        if ENABLE_SPAN_DETECTOR and BertForTokenClassification is None:
+            raise RuntimeError("transformers token classification support is required")
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         logger.info("Loading models on %s (INT8=%s) ...", self.device, USE_INT8)
         self.classifier_max_length = CLASSIFIER_MAX_LENGTH
         self.classifier_temperature = max(CLASSIFIER_TEMPERATURE, 1e-6)
+        self.span_tokenizer = None
+        self.span_detector = None
 
         tokenizer_src = INT8_CLASSIFIER_PATH if USE_INT8 else CLASSIFIER_MODEL_PATH
         span_tokenizer_src = INT8_SPAN_PATH if USE_INT8 else SPAN_MODEL_PATH
@@ -681,6 +687,13 @@ class HybridTextDetector:
         except Exception as exc:
             logger.error("Error loading classifier: %s", exc)
             raise
+
+        if not ENABLE_SPAN_DETECTOR:
+            logger.info(
+                "Span detector disabled "
+                "(set DETECTOR_ENABLE_SPAN=1 to enable legacy boundary hints)."
+            )
+            return
 
         try:
             self.span_tokenizer = BertTokenizer.from_pretrained(span_tokenizer_src)
@@ -757,6 +770,14 @@ class HybridTextDetector:
 
     def detect_boundary(self, text: str) -> dict[str, Any]:
         text_clean = text.replace("[SEP]", "")
+        if not ENABLE_SPAN_DETECTOR or self.span_tokenizer is None or self.span_detector is None:
+            return {
+                "boundary_token": None,
+                "boundary_char": None,
+                "text": text_clean,
+                "tokenSpans": [],
+            }
+
         encoding = self.span_tokenizer(
             text_clean,
             max_length=512,
@@ -831,7 +852,8 @@ async def lifespan(application: FastAPI):
     try:
         detector.classify("预热")
         detector.classify_batch(["人工智能检测预热。", "这是一段示例文本。"])
-        detector.detect_boundary("人工智能正在改变世界。这是一段用于预热的示例文本。")
+        if ENABLE_SPAN_DETECTOR:
+            detector.detect_boundary("人工智能正在改变世界。这是一段用于预热的示例文本。")
         logger.info("Detector warmup complete.")
     except Exception as warm_exc:
         logger.warning("Detector warmup failed (non-fatal): %s", warm_exc)
@@ -946,9 +968,13 @@ async def health_check() -> dict[str, Any]:
             "optimalTemperature": CLASSIFIER_METRICS.get("optimal_temperature"),
         },
         "temperature": CLASSIFIER_TEMPERATURE,
-        "spanDetectorReady": detector is not None
-        and hasattr(detector, "span_detector")
-        and detector.span_detector is not None,
+        "spanDetectorEnabled": ENABLE_SPAN_DETECTOR,
+        "spanDetectorReady": (
+            ENABLE_SPAN_DETECTOR
+            and detector is not None
+            and hasattr(detector, "span_detector")
+            and detector.span_detector is not None
+        ),
         "system": system_info,
         "timestamp": datetime.now().isoformat(),
     }
@@ -967,11 +993,12 @@ async def model_info() -> dict[str, Any]:
     return {
         "modelVersion": MODEL_VERSION,
         "classifierPath": CLASSIFIER_MODEL_PATH,
-        "spanDetectorPath": SPAN_MODEL_PATH,
+        "spanDetectorPath": SPAN_MODEL_PATH if ENABLE_SPAN_DETECTOR else None,
         "runtime": {
             "maxLength": CLASSIFIER_MAX_LENGTH,
             "decisionThreshold": DECISION_THRESHOLD,
             "temperature": CLASSIFIER_TEMPERATURE,
+            "spanDetectorEnabled": ENABLE_SPAN_DETECTOR,
             "spanTriggerMinChars": SPAN_TRIGGER_MIN_CHARS,
         },
         "training": {
@@ -1071,9 +1098,9 @@ class DetectionResponse(BaseModel):
 
 class FeedbackRequest(BaseModel):
     text: str = Field(min_length=1, max_length=MAX_DETECT_TEXT_CHARS)
-    predictedType: Literal["human", "ai", "mixed"]
+    predictedType: Literal["human", "ai"]
     confirmedCorrect: bool
-    confirmedLabel: Literal["human", "ai", "mixed"] | None = None
+    confirmedLabel: Literal["human", "ai"] | None = None
     tags: list[str] = Field(default_factory=list, max_length=16)
     note: str | None = Field(default=None, max_length=500)
     confidence: float | None = Field(default=None, ge=0.0, le=100.0)
@@ -1303,8 +1330,6 @@ def collect_risk_flags(
         flags.append("low_confidence")
     if TEMPLATE_LIKE_PATTERN.search(text):
         flags.append("template_like")
-    if result_type == "mixed" and boundary_sentence_index is None:
-        flags.append("mixed_without_boundary")
     return flags
 
 
@@ -1333,9 +1358,9 @@ def build_reason_analysis(
             signals.append("人类写作特征略占优势，但仍建议结合上下文复核")
     else:
         if score_gap <= 15:
-            signals.append("文本同时呈现两类特征，主导优势不够明显")
+            signals.append("文本处于低优势区间，主导类别不够明显")
         else:
-            signals.append("文本同时出现两类特征，但其中一侧仍保持主导")
+            signals.append("文本不属于当前标准二分类标签，建议人工复核")
 
     if boundary_sentence_index is not None:
         signals.append(
@@ -1358,7 +1383,6 @@ def build_reason_analysis(
         "extreme_length": "文本超长，局部段落可能对整体判断产生扰动",
         "low_confidence": "当前样本处于低置信区间，结论应以人工复核为准",
         "template_like": "文本出现模板化或提示词式表达，这是模型重点关注的高风险信号",
-        "mixed_without_boundary": "文本同时呈现两类特征，但暂未定位到清晰边界",
     }
     for flag in risk_flags:
         message = risk_flag_messages.get(flag)
@@ -1486,7 +1510,7 @@ def build_feedback_override_response(
     elif result_type == "ai":
         type_zh = "AI生成"
     else:
-        type_zh = "混合文本"
+        type_zh = "历史非二分类标签"
 
     reason_summary = (
         "该文本命中人工确认误判记忆库中的完全相同样本，因此本次直接返回历史人工确认标签，"
@@ -1498,7 +1522,7 @@ def build_feedback_override_response(
         "该覆盖仅对 exact match 生效，不对润色、续写或改写文本生效",
     ]
     if confirmed_label == "mixed":
-        reason_signals.append("历史记录原为混合标签，当前界面已按主导倾向折算为二分类结果")
+        reason_signals.append("历史记录原为非二分类标签，当前界面已按主导倾向折算为二分类结果")
     if boundary_sentence_index is not None:
         reason_signals.append(f"沿用历史边界信息：第 {boundary_sentence_index + 1} 句附近")
 
@@ -1565,7 +1589,7 @@ def detect_text(
     # Span detector now triggers by length threshold rather than classifier result.
     # It remains auxiliary evidence and no longer upgrades the top-level label.
     token_spans: list[dict[str, Any]] = []
-    if len(text) >= SPAN_TRIGGER_MIN_CHARS:
+    if ENABLE_SPAN_DETECTOR and len(text) >= SPAN_TRIGGER_MIN_CHARS:
         boundary_res = detector.detect_boundary(text)
         if boundary_res["boundary_char"] is not None:
             boundary_char = int(boundary_res["boundary_char"])
@@ -2069,7 +2093,6 @@ def build_project_local_answer(
         validation_accuracy = format_project_metric_percent(
             CLASSIFIER_METRICS["_full"].get("core_v1_test_clean")
         )
-    token_accuracy = "96.69%"
     calibration_t = CLASSIFIER_METRICS.get("optimal_temperature")
     ece_after = CLASSIFIER_METRICS.get("ece_after")
     train_samples = CLASSIFIER_TRAINING_LOG.get("train_samples")
@@ -2077,8 +2100,7 @@ def build_project_local_answer(
     if answer_frame_title == "30秒总述":
         return (
             "根据当前项目资料，可概括为：该系统聚焦中文 AI 生成文本检测，目标是判断一段文本是人写、AI 写，"
-            "还是人机混合。方法上，以 BERT 微调为核心，采用“分类检测 + 边界定位”的双层方案，"
-            "并结合 [SEP] 边界标记来增强混合文本识别。结果上，当前推荐模型"
+            "当前线上不输出 mixed。方法上，以 BERT 微调为核心，配合数据治理、温度缩放校准和反馈闭环。结果上，当前推荐模型"
             f" {model_name} 的三集平均准确率约 {three_set_avg or '98%+'}，"
             f"独立评估集准确率约 {independent_accuracy or '98%+'}。应用上，这套系统既能做答辩演示，"
             "也可以服务于作业审核、内容风控这类中文 AI 文本识别场景。"
@@ -2086,10 +2108,9 @@ def build_project_local_answer(
 
     if answer_frame_title == "创新点三段式":
         return (
-            "根据当前项目资料，可将创新概括为三点。第一，针对中文混合文本场景，"
-            "系统没有只做二分类，而是把“是否为 AI”判断和“边界在哪里”定位结合起来，形成双层检测结构。"
-            "第二，引入了 [SEP] 边界标记，让模型更容易学习人类段落和 AI 段落的切换位置。"
-            "第三，除了训练集结果，还补了独立评估、校准和答辩演示链路，让模型效果、"
+            "根据当前项目资料，可将创新概括为三点。第一，围绕中文 AI 文本检测构建了稳定的 BERT 二分类主链路。"
+            "第二，通过风险治理移除模板样本和 unknown 来源样本，并补充 formal、LLaMA-405B 与长文 AI 弱项数据。"
+            "第三，除了训练集结果，还补了独立评估、温度缩放校准和答辩演示链路，让模型效果、"
             "置信度和实际展示都能闭环。"
         )
 
@@ -2098,8 +2119,7 @@ def build_project_local_answer(
             "根据当前项目资料，选择 BERT 而不是 GPT、LLaMA 这类大模型，主要有三点原因。"
             "第一，这个任务本质上是判别任务，不是生成任务，BERT 在文本分类上更直接。"
             "第二，BERT 微调的训练和部署成本更低，更适合本科毕设这种可复现、可落地的方案。"
-            "第三，该项目还要做边界标记和 span 级定位，BERT 这类编码器结构更容易和 [SEP] 标记、"
-            "Token 级检测器配合。"
+            "第三，当前线上使用二分类主模型，BERT 的推理链路简单、稳定，便于部署到 FastAPI 服务中。"
         )
 
     if answer_frame_title == "指标口径答辩" or agent_mode == "metrics":
@@ -2110,7 +2130,7 @@ def build_project_local_answer(
             detail_parts.append(f"独立评估集准确率是 {independent_accuracy}。")
         if validation_accuracy:
             detail_parts.append(f"验证集准确率大约是 {validation_accuracy}。")
-        detail_parts.append(f"Token 级边界检测准确率约为 {token_accuracy}。")
+        detail_parts.append("线上输出类型是 Human / AI 二分类。")
         if calibration_t is not None and ece_after is not None:
             detail_parts.append(f"另外做了温度缩放校准，T={calibration_t}，ECE={ece_after}。")
         if train_samples:
@@ -2123,7 +2143,8 @@ def build_project_local_answer(
             "从现有结果看，当前模型在仓库记录的多组评估里表现比较稳定，"
             f"三集平均准确率约 {three_set_avg or '98%+'}，说明它在已覆盖场景下是有效的；"
             "但如果换到更新的模型来源、不同题材或者更强的规避写法，性能仍然可能波动。"
-            "因此更稳妥的结论是：现阶段系统已经通过独立评估、校准和边界修复尽量降低过拟合风险，"
+            "混合文本检测做过离线实验，但因为样本规模与真实分布不足，当前不启用。"
+            "因此更稳妥的结论是：现阶段系统已经通过独立评估、校准和长文样本修复尽量降低过拟合风险，"
             "下一步还需要继续补跨域数据、补新模型样本，并做更严格的外部验证。"
         )
 
@@ -2155,8 +2176,8 @@ def run_project_agent_live_detection(text: str) -> str | None:
     prob_human = float(cls_result["prob_human"])
     result_type = pick_binary_result_type(prob_ai, prob_human)
 
-    boundary_hint = "未触发边界检测"
-    if len(cleaned) >= SPAN_TRIGGER_MIN_CHARS:
+    boundary_hint = "边界检测未启用，当前线上检测只返回 Human / AI 二分类"
+    if ENABLE_SPAN_DETECTOR and len(cleaned) >= SPAN_TRIGGER_MIN_CHARS:
         boundary_res = active_detector.detect_boundary(cleaned)
         boundary_char = boundary_res.get("boundary_char")
         if boundary_char is not None:
@@ -2180,9 +2201,9 @@ _SUGGESTION_POOL: dict[str, list[str]] = {
         "你的数据是怎么构建的？覆盖了哪些模型和来源？",
     ],
     "technical": [
-        "为什么 [SEP] 边界标记能够提升混合文本检测效果？",
+        "为什么当前线上不输出 mixed，只保留 Human / AI？",
         "为什么本文选择 BERT 而不是 GPT / LLaMA 一类生成模型？",
-        "双层检测架构中，分类器与边界检测器分别承担什么作用？",
+        "当前二分类推理链路中，分类器、校准和风险提示分别承担什么作用？",
         "为什么不直接用零样本方法或水印检测？",
         "最大长度设为 256 是怎么决定的？",
     ],
@@ -2205,7 +2226,7 @@ _SUGGESTION_POOL: dict[str, list[str]] = {
 _FOLLOWUP_POOL = [
     "能展开讲讲数据治理具体做了什么吗？",
     "对比一下你的方法和 BERT-BiGRU 的区别？",
-    "混合文本检测的边界定位准确率如何？",
+    "为什么混合文本检测没有纳入线上主链路？",
     "如果换成英文文本，当前方法还能直接用吗？",
     "在误报和漏报之间，本文是如何取舍的？",
     "你这个系统到底能不能真正拿来用？",
@@ -3513,17 +3534,17 @@ _PROJECT_STRUCTURE = {
         "description": "评估脚本 — 完整测试集评估、单文本测试、综合对比",
     },
     "scripts/data_cleaning/": {
-        "description": "数据清洗 — [SEP] 标记插入、Span 标签生成、训练集构建",
+        "description": "数据清洗 — 风险样本清理、弱域增补、训练集构建",
     },
     "scripts/generation/": {
-        "description": "AI 文本生成 — 多模型批量生成、混合文本构造",
+        "description": "AI 文本生成 — 多模型批量生成、难例样本构造",
     },
     "datasets/": {
         "description": "数据集 — 训练/验证/测试集、评估集、反馈闭环数据",
         "key_files": {"datasets/registry.json": "数据集注册表（18 条元数据记录）"},
     },
     "models/": {
-        "description": "训练好的模型权重 — bert_v11c_boundary_fix (分类器) + bert_span_detector (边界检测)",
+        "description": "训练好的模型权重 — bert_v11c_boundary_fix 为当前线上分类器",
     },
     "docs/": {
         "description": "项目文档 — 答辩口径、实验日志、计划、论文草稿",
@@ -3591,7 +3612,26 @@ async def upload_project_qa_materials(
             skipped.append(f"{original_name}: unsupported file type")
             continue
 
-        payload = await upload.read()
+        payload: bytes | None = None
+        file_obj = getattr(upload, "file", None)
+        if file_obj is not None and hasattr(file_obj, "read"):
+            try:
+                current_pos = file_obj.tell() if hasattr(file_obj, "tell") else None
+                if current_pos not in (None, 0) and hasattr(file_obj, "seek"):
+                    file_obj.seek(0)
+                raw_payload = file_obj.read()
+                if isinstance(raw_payload, bytes):
+                    payload = raw_payload
+                elif isinstance(raw_payload, str):
+                    payload = raw_payload.encode("utf-8")
+                else:
+                    payload = b""
+                if current_pos not in (None, 0) and hasattr(file_obj, "seek"):
+                    file_obj.seek(current_pos)
+            except Exception:
+                payload = None
+        if payload is None:
+            payload = await upload.read()
         if len(payload) > PROJECT_QA_MAX_UPLOAD_BYTES:
             skipped.append(f"{original_name}: file too large")
             continue

@@ -3,7 +3,9 @@
 ## 1) 当前推荐配置
 
 - 分类模型: `models/bert_v11c_boundary_fix`
-- 边界模型: `models/bert_span_detector`
+- 线上启用模型: 仅 `bert_v11c_boundary_fix`
+- 输出口径: `human / ai` 二分类
+- 混合文本检测: 已做实验，但因样本规模与真实分布不足，当前线上不启用 `bert_span_detector`，也不返回 `mixed`
 - API 默认端口: `http://localhost:8000`
 - 前端默认读取: `NEXT_PUBLIC_API_URL`（未配置时回退 `http://localhost:8000`）
 
@@ -20,11 +22,11 @@
 | 独立评估集准确率 (910) | 98.57% |
 | 三集平均准确率 | 98.56% |
 | merged_v2_val_clean | 99.13% |
-| Token 级边界检测准确率 | 96.69% |
+| 线上输出类型 | Human / AI |
 
 补充:
 - 训练样本数: 63,113
-- V11c 数据策略: V10 经风险治理（移除模板/unknown）+ 弱域增补 + 长文AI边界修复
+- V11c 数据策略: V10 经风险治理（移除模板/unknown）+ 弱域增补 + 长文AI样本修复
 - 最优温度缩放: `T=0.8165`
 - ECE (校准误差): 0.0034
 
